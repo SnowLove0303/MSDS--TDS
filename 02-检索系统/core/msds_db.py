@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -183,7 +184,11 @@ def classify_note(section: int, value: str) -> str:
     if section == 13:
         return "欧盟废弃细则" if ("欧盟" in v or "EWC" in v) else "法规定义"
     if section == 15:
-        return "指引段" if is_guide_line(v) else "法规条目"
+        # 指引段: 引导句 (is_guide_line 或 以 物质/相关/本/此/按/根/以下 开头);
+        # 否则为法规条目 (《xx法》/GB 编号/条例 等)
+        if is_guide_line(v) or re.match(r"^(物质|相关|本|此|按|根|以下)", v):
+            return "指引段"
+        return "法规条目"
     if section == 16:
         return "免责声明"
     return ""
@@ -686,29 +691,72 @@ def model_tree_nodes(conn: sqlite3.Connection, model_id: int,
     return nodes
 
 
+def listed_tree_nodes(conn: sqlite3.Connection, model_id: int,
+                      sections: set[int] | None = None) -> list:
+    """按清单骨架构建三级树 (CLI --model 渲染): 结构与 PEA-4139 模板参照一致."""
+    from .extract import BigTitleNode, FieldNode, SectionNode
+    nodes: list[SectionNode] = []
+    for num in sorted(_SKELETON):
+        if sections and num not in sections:
+            continue
+        sn = SectionNode(number=num, title=SEC_TITLES.get(num, f"第{num}节"),
+                         full_title=SEC_TITLES.get(num, f"第{num}节"))
+        cur: BigTitleNode | None = None
+        for row in listed_section_rows(conn, model_id, num):
+            if row.kind == "sub":
+                cur = BigTitleNode(seq=row.seq, title=row.label, kind="sub")
+                sn.big_titles.append(cur)
+            elif row.kind == "field":
+                if row.seq:
+                    cur = BigTitleNode(seq=row.seq, title=row.label,
+                                       value=row.value, kind="field")
+                    sn.big_titles.append(cur)
+                elif cur is not None:
+                    cur.children.append(FieldNode(label=row.label,
+                                                  value=row.value, kind="field"))
+                else:
+                    sn.direct_fields.append(FieldNode(label=row.label,
+                                                      value=row.value, kind="field"))
+            elif row.kind == "note":
+                fn = FieldNode(label=row.label, value=row.value, kind="note")
+                if cur is not None:
+                    cur.children.append(fn)
+                else:
+                    sn.direct_fields.append(fn)
+            elif row.kind == "subtable":
+                fn = FieldNode(label=row.label, value=row.value, kind="subtable",
+                               sub_header=row.sub_header, sub_rows=row.sub_rows)
+                if cur is not None:
+                    cur.children.append(fn)
+                else:
+                    sn.direct_fields.append(fn)
+        nodes.append(sn)
+    return nodes
+
+
 def render_model_tree(conn: sqlite3.Connection, model_id: int,
                       sections: set[int] | None = None) -> str:
-    """三级父子级树文本 (同 main.py --extract 的 render_tree 格式)."""
+    """三级父子级树文本 (清单骨架, 同 main.py --extract 的 render_tree 格式)."""
     from .extract import render_tree
-    return render_tree(model_tree_nodes(conn, model_id, sections))
+    return render_tree(listed_tree_nodes(conn, model_id, sections))
 
 
 def render_model_json(conn: sqlite3.Connection, model_id: int,
                       sections: set[int] | None = None) -> str:
-    """嵌套 JSON (同 render_tree_json)."""
+    """嵌套 JSON (清单骨架, 同 render_tree_json)."""
     from .extract import render_tree_json
-    return render_tree_json(model_tree_nodes(conn, model_id, sections))
+    return render_tree_json(listed_tree_nodes(conn, model_id, sections))
 
 
 def render_model_tsv(conn: sqlite3.Connection, model_id: int,
                      sections: set[int] | None = None) -> str:
-    """扁平 TSV: 文件|节|大标题|小标题|标签|字段 (同 --extract --tsv)."""
+    """扁平 TSV: 文件|节|大标题|小标题|标签|字段 (清单骨架)."""
     from .extract import flatten_nodes
     model = conn.execute("SELECT model FROM msds_model WHERE model_id=?",
                          (model_id,)).fetchone()
     fname = model[0] if model else f"model{model_id}"
     rows = ["文件\t节\t大标题\t小标题\t标签\t字段"]
-    for e in flatten_nodes(model_tree_nodes(conn, model_id, sections)):
+    for e in flatten_nodes(listed_tree_nodes(conn, model_id, sections)):
         rows.append("\t".join([
             fname, str(e.section), e.big_title, e.sub_title,
             e.full_label(), e.value.replace("\t", " ").replace("\n", " ")]))
@@ -789,6 +837,147 @@ def model_section_rows(conn: sqlite3.Connection, model_id: int,
                                   editable=False, span=True, index=ridx,
                                   sub_header=json.loads(sub_header or "[]"),
                                   sub_rows=json.loads(sub_rows or "[]")))
+    return out
+
+
+# ==================================================================
+# 清单骨架渲染 (结构冻结: 展示 = 飞书第 5 章 17 节清单结构)
+#
+# 用户确认 (2026-08-17): 全过程只显示飞书规定的父子级字段及结构要求,
+# 以 PEA-4139 模板检索结构为标准参照 — 每节按清单骨架渲染, 数据按标准名
+# 填充, 清单外/缺失一律「无数据」, 不显示任何清单外结构.
+# ==================================================================
+
+# 每节清单骨架: [(kind, seq, label, note_type?), ...]
+#   kind: sub(父级) / field(标签) / note(总结句槽位, 按 note_type 取) /
+#         component(成分表) / subtable(生物限值子表)
+_SKELETON: dict[int, list[tuple]] = {
+    0: [("sub", "0.1", "页眉"), ("field", "", "Version"), ("field", "", "产品名称"),
+        ("sub", "0.2", "页脚"), ("field", "", "公司名称"), ("field", "", "产品型号"),
+        ("field", "", "修订日期"), ("field", "", "页码")],
+    1: [("field", "", "产品名称"), ("field", "", "中文名称"), ("field", "", "化学品分类"),
+        ("field", "1.2", "产品使用建议和使用限制"), ("field", "", "供应商名称"),
+        ("field", "", "供应商地址"), ("field", "", "电话"), ("field", "", "传真")],
+    2: [("field", "2.1", "GHS危险性类别"), ("sub", "2.2", "GHS标签要素"),
+        ("field", "", "GHS象形图"), ("field", "2.3", "信号词"),
+        ("field", "2.4", "危险性说明"), ("field", "2.5", "防范说明"),
+        ("field", "2.6", "物理和化学危险"), ("field", "2.7", "健康危害"),
+        ("field", "2.8", "环境危害"), ("field", "2.9", "其他危害")],
+    3: [("field", "3.1", "产品类型"), ("sub", "3.2", "成分"), ("component", "", "成分表")],
+    4: [("field", "4.1", "一般措施"), ("field", "4.2", "误服"), ("field", "4.3", "接触眼睛"),
+        ("field", "4.4", "接触皮肤"), ("field", "4.5", "吸入")],
+    5: [("field", "5.1", "合适的灭火剂"), ("field", "5.2", "不合适的灭火剂"),
+        ("field", "5.3", "物质或混合物的特殊危害"), ("field", "5.4", "消防预防措施和保护设备")],
+    6: [("field", "6.1", "个人预防措施、应急程序"), ("field", "6.2", "环境保护措施"),
+        ("field", "6.3", "污染物收集和清除的方法")],
+    7: [("field", "7.1", "安全操作防范"), ("field", "7.2", "安全储存条件")],
+    8: [("sub", "8.1", "暴露控制"), ("field", "", "呼吸系统防护"), ("field", "", "手部防护"),
+        ("field", "", "防护手套的合适材料"), ("field", "", "氟化橡胶 –FKM"),
+        ("field", "", "丁基橡胶 –IIR"), ("field", "", "丁腈橡胶 – NBR"),
+        ("field", "", "建议"), ("field", "", "眼睛防护"), ("field", "", "身体防护"),
+        ("subtable", "8.2", "生物限值"), ("field", "8.3", "工程控制")],
+    9: [("field", "9.1", "外观"), ("field", "9.2", "嗅觉阈值"), ("field", "9.3", "pH值"),
+        ("field", "9.4", "离子性"), ("field", "9.5", "初沸点"), ("field", "9.6", "闪点"),
+        ("field", "9.7", "蒸发速率"), ("field", "9.8", "可燃性（固态、气态）"),
+        ("field", "9.9", "燃烧值"), ("field", "9.10", "饱和蒸气压"),
+        ("field", "9.11", "相对蒸气密度"), ("field", "9.12", "密度"),
+        ("field", "9.13", "水溶性"), ("field", "9.14", "表面张力"),
+        ("field", "9.15", "辛醇/水分配系数对数值"), ("field", "9.16", "自燃温度"),
+        ("field", "9.17", "引燃温度"), ("field", "9.18", "分解温度"),
+        ("field", "9.19", "动力粘度"), ("field", "9.20", "爆炸特性"),
+        ("field", "9.21", "粉尘爆炸级别"), ("field", "9.22", "固体含量"),
+        ("field", "9.23", "其他信息")],
+    10: [("field", "10.1", "化学稳定性"), ("field", "10.2", "危险分解产物"),
+         ("field", "10.3", "可能的危害反应")],
+    11: [("note", "", "", "产品说明"), ("note", "", "", "成分参考引导段"),
+         ("field", "11.1", "急性毒性"), ("field", "11.2", "主要皮肤刺激性"),
+         ("field", "11.3", "主要眼睛刺激性"), ("field", "11.4", "致敏性"),
+         ("field", "11.5", "致突变性"), ("field", "11.6", "致癌性"),
+         ("field", "11.7", "生殖毒性"),
+         ("field", "11.8", "特异性靶器官系统毒性（一次接触/反复接触）"),
+         ("field", "11.9", "吸入危险"), ("field", "11.10", "附加信息")],
+    12: [("note", "", "", "产品说明"), ("note", "", "", "成分参考引导段"),
+         ("field", "12.1", "生态毒性"), ("field", "12.2", "持久性和降解性"),
+         ("field", "12.3", "其他不利的影响")],
+    13: [("note", "", "", "法规定义"), ("note", "", "", "欧盟废弃细则"),
+         ("field", "", "处理方法")],
+    14: [("field", "14.1", "公路和铁路运输"), ("field", "14.2", "海上运输"),
+         ("field", "14.3", "空运"), ("field", "14.4", "用户特殊注意事项")],
+    15: [("note", "", "", "指引段"), ("sub", "", "其它的规定"),
+         ("sub", "", "符合下列法规要求"), ("note", "", "", "法规条目")],
+    16: [("note", "", "", "免责声明")],
+}
+
+_ND = "无数据"   # 缺失值统一标注 (结构冻结: 宁可无数据不扩结构)
+
+
+def listed_section_rows(conn: sqlite3.Connection, model_id: int,
+                        num: int) -> list:
+    """按飞书清单骨架渲染一节 → SectionRow 列表 (值按标准名填充, 缺 → 无数据).
+
+    - field 槽: 明细 std_name==清单字段名的行值合并 (多行 \\n), 无 → 无数据
+    - note 槽: 明细 note_type==槽位的值, 法规条目槽展开为 N 条
+    - component 槽 (S3): 明细成分行 → 逐行 field 行
+    - subtable 槽 (S8.2): 明细 subtable 行 (sub_header/sub_rows), 无 → 无数据
+    """
+    from .structure import SectionRow
+    rows = _section_rows(conn, model_id, {num})
+    by_std: dict[str, list[str]] = {}
+    notes: dict[str, list[str]] = {}
+    comps: list[SectionRow] = []
+    subtable: SectionRow | None = None
+    for (sec, seq, label, std, value, kind, editable, ridx,
+         note_type, sub_header, sub_rows) in rows:
+        if kind == "field" and std:
+            by_std.setdefault(std, []).append(value)
+        elif kind == "note" and note_type:
+            notes.setdefault(note_type, []).append(value)
+        elif kind == "component":
+            comps.append(SectionRow(kind="field", label=label, value=value,
+                                    editable=bool(editable), index=ridx))
+        elif kind == "subtable":
+            subtable = SectionRow(kind="subtable", label=label, value=value,
+                                  editable=False, span=True, index=ridx,
+                                  sub_header=json.loads(sub_header or "[]"),
+                                  sub_rows=json.loads(sub_rows or "[]"))
+    out: list[SectionRow] = []
+    for item in _SKELETON.get(num, []):
+        kind, seq, label = item[0], item[1], item[2]
+        ntype = item[3] if len(item) > 3 else ""
+        if kind == "sub":
+            out.append(SectionRow(kind="sub", seq=seq, label=label,
+                                  editable=False))
+        elif kind == "field":
+            vals = by_std.get(label) or []
+            v = "\n".join(x for x in vals if x and x.strip()).strip()
+            out.append(SectionRow(kind="field", seq=seq, label=label,
+                                  value=v or _ND, editable=True))
+        elif kind == "note":
+            if ntype == "法规条目":
+                items = notes.get("法规条目") or []
+                for i, v in enumerate(items, 1):
+                    out.append(SectionRow(kind="note", label=f"法规条目{i}",
+                                          value=v or _ND, editable=True,
+                                          span=True))
+                if not items:
+                    out.append(SectionRow(kind="note", label="法规条目",
+                                          value=_ND, editable=True, span=True))
+            else:
+                vals = notes.get(ntype) or []
+                v = "\n".join(x for x in vals if x and x.strip()).strip()
+                out.append(SectionRow(kind="note", label=ntype,
+                                      value=v or _ND, editable=True, span=True))
+        elif kind == "component":
+            out.extend(comps)
+            if not comps:
+                out.append(SectionRow(kind="note", label="成分",
+                                      value=_ND, editable=True, span=True))
+        elif kind == "subtable":
+            if subtable is not None:
+                out.append(subtable)
+            else:
+                out.append(SectionRow(kind="note", label="生物限值",
+                                      value=_ND, editable=True, span=True))
     return out
 
 

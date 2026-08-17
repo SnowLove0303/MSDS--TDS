@@ -15,8 +15,8 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 from pathlib import Path
 
-from core.msds_db import (SEC_TITLES, find_models, model_detail,
-                          model_section_rows, model_search, open_db)
+from core.msds_db import (SEC_TITLES, find_models, listed_section_rows,
+                          model_detail, model_search, open_db)
 
 from .section_tree import SectionView
 from .theme import (COLOR_BORDER, COLOR_GRAY, COLOR_GREEN, COLOR_NAV,
@@ -262,6 +262,7 @@ class DbSearchWindow(tk.Toplevel):
         mid, model = self._current
         d = model_detail(self._conn, mid)
         title = SEC_TITLES.get(num, f"第{num}节")
-        rows = model_section_rows(self._conn, mid, num)
-        meta = f"{model} [{d.get('source', '')}] · 第{num}节 · 明细 {len(rows)} 行"
+        # 清单骨架渲染: 结构与 PEA-4139 模板参照一致, 缺值标「无数据」
+        rows = listed_section_rows(self._conn, mid, num)
+        meta = f"{model} [{d.get('source', '')}] · 第{num}节 · 按飞书清单结构渲染"
         self.view.show_rows(num, f"{title} — {model}", rows, meta=meta)
