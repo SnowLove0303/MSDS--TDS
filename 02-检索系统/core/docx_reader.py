@@ -1147,12 +1147,11 @@ def _post_check(result: ParseResult) -> None:
 
 
 # ============================================================
-# 内化默认模板 (MSDS_CN 国彩 模板.docx)
-#   复制进程序 templates/ 目录, 与源文件字节级一致 (SHA256 校验),
-#   后续作为覆写默认模板: 覆写只允许 添加/删减/编辑 部分内容,
-#   且继承原文格式, 不改变模板布局.
-#   TEMPLATE_PATH 优先指向内化副本, 外部源路径作回退 (便于离线/迁移).
+# 内化默认模板 (用户确认 2026-08-17: 定稿模板 PEA-4139 MSDS_CN 冠志 为唯一源/参照)
+#   定稿模板优先, 内化副本 (templates/MSDS_CN 国彩 模板.docx) 作回退 (离线/迁移).
 # ============================================================
+_TEMPLATE_DINGGAO = Path(
+    r"F:\正式项目与模块化内容\冠志\MSDS\MSDS 数据清理模块\标准模板\标准模板\定稿模板\PEA-4139 MSDS_CN 冠志 模板.docx")
 _TEMPLATE_RESOURCE = (Path(__file__).resolve().parent.parent
                       / "templates" / "MSDS_CN 国彩 模板.docx")
 _TEMPLATE_EXTERNAL = Path(
@@ -1160,11 +1159,10 @@ _TEMPLATE_EXTERNAL = Path(
 
 
 def _resolve_template() -> Path:
-    """解析默认模板: 优先内化副本 (templates/), 缺失时回退外部源路径."""
-    if _TEMPLATE_RESOURCE.exists():
-        return _TEMPLATE_RESOURCE
-    if _TEMPLATE_EXTERNAL.exists():
-        return _TEMPLATE_EXTERNAL
+    """解析默认模板: 优先定稿模板 (冠志版), 回退内化副本/外部源路径."""
+    for cand in (_TEMPLATE_DINGGAO, _TEMPLATE_RESOURCE, _TEMPLATE_EXTERNAL):
+        if cand.exists():
+            return cand
     return _TEMPLATE_RESOURCE  # 均不存在 → 返回内化路径 (报错信息友好)
 
 

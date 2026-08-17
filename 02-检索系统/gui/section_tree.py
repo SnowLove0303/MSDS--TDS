@@ -41,9 +41,10 @@ class SectionTree(ttk.Frame):
         self._items: dict[int, str] = {}
 
     def set_result(self, result: ParseResult):
-        """加载完整三级树 (保存原始节点, 供检索过滤后恢复)."""
+        """加载骨架树 (统一结构, 与数据库检索一致; 保存原始节点供检索过滤)."""
         self._result = result
-        self._full_nodes = build_hierarchy(result)
+        from core.msds_db import listed_tree_nodes_from_result
+        self._full_nodes = listed_tree_nodes_from_result(result)
         self._apply_nodes(self._full_nodes, open_sec=True)
 
     def filter_by(self, query: str, scope: str = "all"):

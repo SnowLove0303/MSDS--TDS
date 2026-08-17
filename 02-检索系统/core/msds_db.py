@@ -938,46 +938,62 @@ _SKELETON: dict[int, list[tuple]] = {
 
 _ND = "无数据"   # 缺失值统一标注 (结构冻结: 宁可无数据不扩结构)
 
+# ------------------------------------------------------------------
+# 结构写死 (结构冻结强制校验)
+#
+# 用户确认 (2026-08-17): 父子级结构及标签字段必须固定死, 防止其他线程/
+# Agent 在批量洗数据时改动. 本指纹固化当前 17 节 schema 字段集 + 骨架,
+# build_msds_db.py 每次入库前强制校验, 不一致即拒绝入库.
+# 有意的结构变更流程: 修改 schema/_SKELETON → 重新生成指纹 → 用户确认.
+# ------------------------------------------------------------------
 
-def listed_section_rows(conn: sqlite3.Connection, model_id: int,
-                        num: int) -> list:
-    """按飞书清单骨架渲染一节 → SectionRow 列表 (值按标准名填充, 缺 → 无数据).
+STRUCT_FINGERPRINT = "07f97a44b0a48133"
 
-    - field 槽: 明细 std_name==清单字段名的行值合并 (多行 \\n), 无 → 无数据
-    - note 槽: 明细 note_type==槽位的值, 法规条目槽展开为 N 条
-    - component 槽 (S3): 明细成分行 → 逐行 field 行
-    - subtable 槽 (S8.2): 明细 subtable 行 (sub_header/sub_rows), 无 → 无数据
+
+def structure_fingerprint() -> str:
+    """当前结构的指纹 (17 节 schema 字段集 + 骨架)."""
+    import hashlib
+    h = hashlib.sha256()
+    for num in range(17):
+        h.update(f"S{num}:".encode())
+        for f in standard_fields(num):
+            h.update(f"{f.name}|{f.kind}|{f.collapse}|{f.multi}|"
+                     f"{','.join(f.aliases)};".encode())
+        h.update("SKELETON:".encode())
+        for it in _SKELETON.get(num, []):
+            h.update("|".join(str(x) for x in it).encode())
+    return h.hexdigest()[:16]
+
+
+def validate_structure() -> str:
+    """强制校验冻结结构; 不一致抛 RuntimeError (拒绝入库). 返回当前指纹."""
+    cur = structure_fingerprint()
+    if cur != STRUCT_FINGERPRINT:
+        raise RuntimeError(
+            "❌ 冻结结构校验失败: 当前 schema/_SKELETON 与固化版本不一致 "
+            f"(期望 {STRUCT_FINGERPRINT}, 实际 {cur}).\n"
+            "结构已被人为改动 — 禁止入库. 如需变更结构, 必须更新 "
+            "STRUCT_FINGERPRINT 并经用户确认.")
+    return cur
+
+
+def _listed_rows_core(num: int, by_std: dict[str, list[str]],
+                      notes: dict[str, list[str]], comps: list,
+                      subtable, model_name: str = "") -> list:
+    """骨架渲染核心 (数据源无关): 按 _SKELETON 渲染一节 SectionRow 列表.
+
+    供 数据库检索 (listed_section_rows) 与 docx 直读 (listed_rows_from_result)
+    共用, 保证两类展示结构完全一致 (基于结构找内容).
     """
     from .structure import SectionRow
-    rows = _section_rows(conn, model_id, {num})
-    by_std: dict[str, list[str]] = {}
-    notes: dict[str, list[str]] = {}
-    comps: list[SectionRow] = []
-    subtable: SectionRow | None = None
-    for (sec, seq, label, std, value, kind, editable, ridx,
-         note_type, sub_header, sub_rows) in rows:
-        if kind == "field" and std:
-            by_std.setdefault(std, []).append(value)
-        elif kind == "note" and note_type:
-            notes.setdefault(note_type, []).append(value)
-        elif kind == "component":
-            comps.append(SectionRow(kind="field", label=label, value=value,
-                                    editable=bool(editable), index=ridx))
-        elif kind == "subtable":
-            subtable = SectionRow(kind="subtable", label=label, value=value,
-                                  editable=False, span=True, index=ridx,
-                                  sub_header=json.loads(sub_header or "[]"),
-                                  sub_rows=json.loads(sub_rows or "[]"))
     out: list[SectionRow] = []
     # S1: 产品名称若为纯型号 → 与中文名称合并 (参照 PEA-4139 模板)
-    if num == 1:
-        model = conn.execute("SELECT model FROM msds_model WHERE model_id=?",
-                             (model_id,)).fetchone()[0]
+    if num == 1 and model_name:
         pname = (by_std.get("产品名称") or [""])[0].strip()
-        if pname and pname == model:
+        if pname and pname == model_name:
             cname = (by_std.get("中文名称") or [""])[0].strip()
-            if cname and model not in cname:
-                by_std["中文名称"] = [f"{cname} {model}"]
+            if cname and model_name not in cname:
+                by_std["中文名称"] = [f"{cname} {model_name}"]
             by_std["产品名称"] = [""]
     for item in _SKELETON.get(num, []):
         kind, seq, label = item[0], item[1], item[2]
@@ -1007,8 +1023,7 @@ def listed_section_rows(conn: sqlite3.Connection, model_id: int,
                                       value=v or _ND, editable=True, span=True))
             else:
                 # 独立说明段 (S15 其它的规定/符合下列法规要求): 跨表格列字段判定,
-                # 显示说明文字本身 (无内容时), 有内容则显示内容 (后续增强: 跨列
-                # 自动匹配预留结构标签)
+                # 显示说明文字本身 (无内容时), 有内容则显示内容
                 content = notes.get(label) or []
                 v = "\n".join(x for x in content if x and x.strip()).strip()
                 out.append(SectionRow(kind="note", label=label,
@@ -1041,6 +1056,118 @@ def listed_section_rows(conn: sqlite3.Connection, model_id: int,
                                 "生物限值", "采样时间"],
                     sub_rows=[["", "", "", "", ""]]))
     return out
+
+
+def listed_section_rows(conn: sqlite3.Connection, model_id: int,
+                        num: int) -> list:
+    """数据库检索骨架渲染: 从明细收集 → _listed_rows_core (与 docx 直读同结构)."""
+    from .structure import SectionRow
+    rows = _section_rows(conn, model_id, {num})
+    by_std: dict[str, list[str]] = {}
+    notes: dict[str, list[str]] = {}
+    comps: list[SectionRow] = []
+    subtable: SectionRow | None = None
+    for (sec, seq, label, std, value, kind, editable, ridx,
+         note_type, sub_header, sub_rows) in rows:
+        if kind == "field" and std:
+            by_std.setdefault(std, []).append(value)
+        elif kind == "note" and note_type:
+            notes.setdefault(note_type, []).append(value)
+        elif kind == "component":
+            comps.append(SectionRow(kind="field", label=label, value=value,
+                                    editable=bool(editable), index=ridx))
+        elif kind == "subtable":
+            subtable = SectionRow(kind="subtable", label=label, value=value,
+                                  editable=False, span=True, index=ridx,
+                                  sub_header=json.loads(sub_header or "[]"),
+                                  sub_rows=json.loads(sub_rows or "[]"))
+    model = conn.execute("SELECT model FROM msds_model WHERE model_id=?",
+                         (model_id,)).fetchone()
+    return _listed_rows_core(num, by_std, notes, comps, subtable,
+                             model[0] if model else "")
+
+
+def listed_rows_from_result(result, num: int) -> list:
+    """docx 直读骨架渲染: 从 ParseResult 按清单骨架渲染一节.
+
+    与数据库检索 (listed_section_rows) 完全同结构 — 用户确认: docx 直读
+    展示/检索输出也必须符合骨架结构 (后续按输出做匹配覆写).
+    """
+    from .structure import SectionRow
+    sec = result.sections.get(num)
+    by_std: dict[str, list[str]] = {}
+    notes: dict[str, list[str]] = {}
+    comps: list[SectionRow] = []
+    subtable: SectionRow | None = None
+    if sec is not None:
+        cur_major: dict[int, str] = {}
+        for row in sec.iter_rows():
+            if row.kind == "field":
+                std = _db_std_name(num, row.label, cur_major)
+                if std and std in _listed_field_names(num) \
+                        and (row.value or "").strip():
+                    by_std.setdefault(std, []).append(row.value)
+            elif row.kind == "note":
+                nt = classify_note(num, row.value)
+                if nt:
+                    notes.setdefault(nt, []).append(row.value)
+            elif row.kind == "subtable":
+                subtable = SectionRow(
+                    kind="subtable", label=row.label,
+                    value=_subtable_text(row.label, row.sub_header, row.sub_rows),
+                    editable=False, span=True,
+                    sub_header=list(row.sub_header),
+                    sub_rows=[list(r) for r in row.sub_rows])
+        if sec.is_component_table:
+            for c in sec.components:
+                comps.append(SectionRow(
+                    kind="field", label=c.name,
+                    value=f"CAS: {c.cas} | 含量: {c.conc}",
+                    editable=c.editable))
+    model_name = _model_of(result, result.file_name)
+    return _listed_rows_core(num, by_std, notes, comps, subtable, model_name)
+
+
+def listed_tree_nodes_from_result(result, sections: set[int] | None = None) -> list:
+    """docx 直读骨架树 (CLI --extract / GUI 目录): 结构与数据库检索完全一致."""
+    from .extract import BigTitleNode, FieldNode, SectionNode
+    nodes: list[SectionNode] = []
+    for num in sorted(_SKELETON):
+        if sections and num not in sections:
+            continue
+        sn = SectionNode(number=num, title=SEC_TITLES.get(num, f"第{num}节"),
+                         full_title=SEC_TITLES.get(num, f"第{num}节"))
+        cur: BigTitleNode | None = None
+        for row in listed_rows_from_result(result, num):
+            if row.kind == "sub":
+                cur = BigTitleNode(seq=row.seq, title=row.label, kind="sub")
+                sn.big_titles.append(cur)
+            elif row.kind == "field":
+                if row.seq:
+                    cur = BigTitleNode(seq=row.seq, title=row.label,
+                                       value=row.value, kind="field")
+                    sn.big_titles.append(cur)
+                elif cur is not None:
+                    cur.children.append(FieldNode(label=row.label,
+                                                  value=row.value, kind="field"))
+                else:
+                    sn.direct_fields.append(FieldNode(label=row.label,
+                                                      value=row.value, kind="field"))
+            elif row.kind == "note":
+                fn = FieldNode(label=row.label, value=row.value, kind="note")
+                if cur is not None:
+                    cur.children.append(fn)
+                else:
+                    sn.direct_fields.append(fn)
+            elif row.kind == "subtable":
+                fn = FieldNode(label=row.label, value=row.value, kind="subtable",
+                               sub_header=row.sub_header, sub_rows=row.sub_rows)
+                if cur is not None:
+                    cur.children.append(fn)
+                else:
+                    sn.direct_fields.append(fn)
+        nodes.append(sn)
+    return nodes
 
 
 if __name__ == "__main__":

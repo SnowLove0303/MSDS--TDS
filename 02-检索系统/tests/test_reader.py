@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-"""核心读取器回归测试: 以 MSDS_CN 国彩 模板为标准."""
+"""核心读取器回归测试: 以 定稿模板 PEA-4139 MSDS_CN 冠志 模板 为标准 (用户确认唯一源)."""
 from __future__ import annotations
 
 from pathlib import Path
 
 from core.docx_reader import TEMPLATE_PATH, read_msds
 
-# 默认模板 = 内化副本 (templates/), 字节级一致, 不依赖外部源路径
+# 默认模板 = 定稿模板 (用户确认唯一源/参照)
 TEMPLATE = TEMPLATE_PATH
 PU1034 = Path(r"F:\正式项目与模块化内容\MSDS 数据清理模块\标准模板\产品详情\TDS MSDS\产品 TDS MSDS -- WORD版本\1-1 单组份水性聚氨酯树脂 PU\PU-1034 msds_CN 国彩.docx")
 
 
 def test_default_template_is_embedded():
-    """默认模板应为程序内化副本 (templates/ 目录), 且可读."""
-    from core.docx_reader import _TEMPLATE_RESOURCE
-    assert str(_TEMPLATE_RESOURCE).endswith("templates\\MSDS_CN 国彩 模板.docx")
-    assert _TEMPLATE_RESOURCE.exists(), "内化模板文件缺失"
-    assert TEMPLATE == _TEMPLATE_RESOURCE, "TEMPLATE_PATH 应指向内化副本"
+    """默认模板应为定稿模板 (用户确认唯一源), 且可读."""
+    from core.docx_reader import _TEMPLATE_DINGGAO
+    assert str(_TEMPLATE_DINGGAO).endswith("定稿模板\\PEA-4139 MSDS_CN 冠志 模板.docx")
+    assert _TEMPLATE_DINGGAO.exists(), "定稿模板文件缺失"
+    assert TEMPLATE == _TEMPLATE_DINGGAO, "TEMPLATE_PATH 应指向定稿模板"
     r = read_msds(TEMPLATE)
     assert r.sections_count == 17
     assert "PEA-4139" in r.header
@@ -117,7 +117,8 @@ def test_s8_order_matches_doc():
         f"材质行应在建议之前: {labels}"
     assert labels.index("建议") < labels.index("眼睛防护") < labels.index("身体防护"), \
         f"建议/眼睛/身体防护顺序应保持: {labels}"
-    assert labels[-1] == "身体防护", f"S8 末行应为身体防护: {labels}"
+    assert labels.index("生物限值") > labels.index("身体防护"), \
+        f"S8.2 生物限值应在身体防护之后: {labels}"
 
 
 def test_s3_component_table_cells():
@@ -125,9 +126,9 @@ def test_s3_component_table_cells():
     r = read_msds(TEMPLATE)
     s3 = r.section(3)
     assert s3 is not None and s3.is_component_table
-    # 成分行按序: 丙烯酸共聚物 在 去离子水 前 (与文档一致)
+    # 成分行按序 (定稿模板: 成分1 → 成分2)
     names = [c.name for c in s3.components]
-    assert names == ["丙烯酸共聚物", "去离子水", "二乙二醇单丁醚"], names
+    assert names == ["成分1", "成分2"], names
     # 产品类型字段在 order 中为 field
     assert "field" in s3.order
 
@@ -147,10 +148,10 @@ def test_extract_hierarchy():
     assert breath and breath[0].sub_title == "8.1 暴露控制", f"呼吸系统防护应归属 8.1: {breath[0]!r}"
     # S3 成分
     s3 = [e for e in entries if e.section == 3 and e.kind == "component"]
-    assert any("丙烯酸共聚物" in e.label for e in s3), "S3 成分应提取"
-    # 精确定位 API
+    assert any("成分" in e.label for e in s3), "S3 成分应提取"
+    # 精确定位 API (定稿模板 S1 中文名称 = 占位文案)
     f = get_field(entries, 1, "中文名称")
-    assert f and "PEA-4139" in f.value
+    assert f and f.value, "S1 中文名称应有值"
     f2 = get_field(entries, 9, "密度")
     assert f2 and f2.value
     # 检索 API
@@ -160,7 +161,7 @@ def test_extract_hierarchy():
     # 文本渲染含分层结构
     text = render_text(entries)
     assert "[1] 1.物料及供应商标识" in text
-    assert "─ 8.1 暴露控制" in text
+    assert "8.1 暴露控制" in text
 
 
 def test_extract_many_batch():
@@ -210,7 +211,7 @@ def test_s1_fields():
     fm = s1.field_map()
     assert "中文名称" in fm
     assert "供应商名称" in fm
-    assert fm["供应商名称"] == "英德市国彩精细化工有限公司"
+    assert fm["供应商名称"] == "广州冠志新材料科技有限公司"
     assert "供应商地址" in fm
 
 
@@ -219,7 +220,7 @@ def test_header_footer_includes_tables():
     r = read_msds(TEMPLATE)
     assert "物料安全数据表" in r.header
     assert "PEA-4139" in r.header, f"页眉应含页眉表产品名, 实际: {r.header!r}"
-    assert "英德市国彩精细化工有限公司" in r.footer, f"页脚应含公司名, 实际: {r.footer!r}"
+    assert "广州冠志新材料科技有限公司" in r.footer, f"页脚应含公司名, 实际: {r.footer!r}"
     assert "修订日期" in r.footer
     assert "3 / 5" in r.footer, f"页脚应含页码, 实际: {r.footer!r}"
 
@@ -240,7 +241,7 @@ def test_s3_components():
     s3 = r.section(3)
     assert s3 is not None
     assert s3.is_component_table
-    assert len(s3.components) >= 3
+    assert len(s3.components) >= 2   # 定稿模板 2 成分
     first = s3.components[0]
     assert first.name and first.cas and first.conc
     assert "3.1 产品类型" in s3.field_map()

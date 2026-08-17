@@ -62,6 +62,14 @@ def main() -> int:
     db_path = args[0]
     rest = args[1:]
 
+    # 结构写死: 每次运行强制校验冻结结构 (防其他线程/Agent 改动 schema/骨架)
+    from core.msds_db import validate_structure
+    try:
+        validate_structure()
+    except RuntimeError as exc:
+        print(str(exc))
+        return 3
+
     # 只读子命令
     db = open_db(db_path)
     if "--list" in rest or "--models" in rest:

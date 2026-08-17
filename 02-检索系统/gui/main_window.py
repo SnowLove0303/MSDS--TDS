@@ -209,7 +209,13 @@ class MainWindow(tk.Tk):
         self._current_section = num
         src = self._display_source_of()
         if src:
-            self.section_view.show_section(num, src, self._editable_overrides, self._toggle_editable)
+            # 统一骨架: docx 直读展示与数据库检索同结构 (基于结构找内容)
+            from core.msds_db import SEC_TITLES, listed_rows_from_result
+            rows = listed_rows_from_result(src, num)
+            title = f"{SEC_TITLES.get(num, f'第{num}节')} — {Path(src.file_name).stem}"
+            self.section_view.show_rows(num, title, rows, meta="",
+                                        overrides=self._editable_overrides,
+                                        on_toggle=self._toggle_editable)
 
     def _display_source_of(self) -> ParseResult | None:
         """当前显示源: 按显示状态返回 产品/模板 (恢复默认模板后显示模板)."""

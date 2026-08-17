@@ -77,12 +77,11 @@ def _extract_cli(argv: list[str]) -> int:
         return 2
     if len(paths) == 1:
         r = read_msds(paths[0])
-        # 三级父子级树 (对应 GUI 表格: 节 → 大标题 → 字段)
-        from core.extract import (build_hierarchy, flatten_nodes, render_tree,
-                                  render_tree_json, search_tree)
-        nodes = build_hierarchy(r)
-        if sections:
-            nodes = [n for n in nodes if n.number in sections]
+        # 骨架三级树 (统一结构: 与数据库检索/GUI 直读完全一致, 基于结构找内容)
+        from core.extract import (flatten_nodes, render_tree, render_tree_json,
+                                  search_tree)
+        from core.msds_db import listed_tree_nodes_from_result
+        nodes = listed_tree_nodes_from_result(r, sections)
         if query:
             nodes = search_tree(nodes, query, scope)
         entries = flatten_nodes(nodes)   # 统计用
@@ -102,16 +101,17 @@ def _extract_cli(argv: list[str]) -> int:
         else:
             print(text)
         return 0
-    # 批量: 多文件 → 每文件三级树
-    from core.extract import (build_hierarchy, flatten_nodes, render_tree,
-                              render_tree_json, search_tree)
+    # 批量: 多文件 → 每文件骨架三级树
+    from core.extract import (flatten_nodes, render_tree, render_tree_json,
+                              search_tree)
+    from core.msds_db import listed_tree_nodes_from_result
     collected: dict[str, list] = {}
     total = 0
     for p in paths:
         try:
             r = read_msds(p)
-            nodes = build_hierarchy(r)
-            if sections:
+            nodes = listed_tree_nodes_from_result(r, sections)
+            if query:
                 nodes = [n for n in nodes if n.number in sections]
             if query:
                 nodes = search_tree(nodes, query, scope)

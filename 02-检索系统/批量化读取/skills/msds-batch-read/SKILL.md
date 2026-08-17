@@ -61,11 +61,11 @@ description: >
 ## 运行环境
 
 - Python: `E:\MorenAnzhuangLujing\Anaconda\python.exe` (需 python-docx / openpyxl)
-- 批量读取: `F:\正式项目与模块化内容\Word 覆写模块\结构读取\批量化读取\batch_read.py`
-- 数据库构建: `F:\正式项目与模块化内容\Word 覆写模块\结构读取\批量化读取\build_db.py`
-- 全量导出 Excel: `F:\正式项目与模块化内容\Word 覆写模块\结构读取\批量化读取\export_excel.py`
-- 封装: `F:\正式项目与模块化内容\Word 覆写模块\结构读取\批量化读取\batch-read.ps1`
-- 核心依赖: `F:\正式项目与模块化内容\Word 覆写模块\结构读取\core\` (docx_reader / extract / structure)
+- 批量读取: `F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\结构读取\批量化读取\batch_read.py`
+- 数据库构建: `F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\结构读取\批量化读取\build_db.py`
+- 全量导出 Excel: `F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\结构读取\批量化读取\export_excel.py`
+- 封装: `F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\结构读取\批量化读取\batch-read.ps1`
+- 核心依赖: `F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\结构读取\core\` (docx_reader / extract / structure)
 
 建议用 PowerShell 封装 (自动定位 Python, 无需手填解释器路径);
 也可以直接 `python batch_read.py` (脚本内部已用绝对路径定位 core 模块)。
@@ -77,47 +77,47 @@ description: >
 .\batch-read.ps1 "F:\...\BL-8085 msds_CN 国彩.docx" --sections 9
 
 # 2. 目录递归提取全部 S3 成分表 → TSV
-.\batch-read.ps1 "F:\数据库\MSDS\中文" --sections 3 --tsv --out s3.tsv --summary
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS\中文" --sections 3 --tsv --out s3.tsv --summary
 
 # 3. 通配符 + 关键词检索 (标签含"供应商")
-.\batch-read.ps1 "F:\数据库\MSDS\英文\*.docx" --query "供应商" --scope label
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS\英文\*.docx" --query "供应商" --scope label
 
 # 4. 全库扫描 → JSON 报告 + 汇总 (不输出逐文件正文)
-.\batch-read.ps1 "F:\数据库\MSDS" --report scan.json --summary --quiet
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" --report scan.json --summary --quiet
 
 # 5. 全库 token 完整性校验 (慢, 逐文件与原文比对)
-.\batch-read.ps1 "F:\数据库\MSDS" --verify --report integrity.json
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" --verify --report integrity.json
 
 # 6. 批量生成"文档 × 字段"对比矩阵 (宽表, 列头=Section{n} 序号 标题) → Excel
-.\batch-read.ps1 "F:\数据库\MSDS\中文" --matrix --out 对比表.xlsx
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS\中文" --matrix --out 对比表.xlsx
 
 # 7. 仅 S3 成分矩阵 (成分名/CAS/含量拆三列) → TSV
-.\batch-read.ps1 "F:\数据库\MSDS\中文" --sections 3 --matrix --out 成分矩阵.tsv
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS\中文" --sections 3 --matrix --out 成分矩阵.tsv
 
 # 8. 矩阵 + 值状态三态列 (有值/无数据/无此字段) → Excel
-.\batch-read.ps1 "F:\数据库\MSDS\中文" --matrix --states --out 对比表_带状态.xlsx
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS\中文" --matrix --states --out 对比表_带状态.xlsx
 
 # 9. 成分分列输出 (每文档一行, 成分1|CAS1|含量1|成分2|... 交替平铺) → TSV
-.\batch-read.ps1 "F:\数据库\MSDS\中文" --sections 3 --comp-cols --tsv --out 成分分列.tsv
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS\中文" --sections 3 --comp-cols --tsv --out 成分分列.tsv
 
 # 10. 成分分列 JSON (数据库入库用: {文件名: [{name, cas, conc}]})
-.\batch-read.ps1 "F:\数据库\MSDS" --comp-cols --json --out 成分分列.json
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" --comp-cols --json --out 成分分列.json
 
 # 11. 全库全部信息汇总 → Excel 宽表 (首行字段标题, 首列产品型号, 按大类排序)
 python "F:\...\批量化读取\export_excel.py" "F:\...\MSDS数据库.sqlite" -o "MSDS全量汇总.xlsx"
 
 # ---- 批量化检索增强 ----
 # 12. 文件命中清单: 哪些文件含"二丙二醇", 各命中几处 (批量审计"谁命中")
-.\batch-read.ps1 "F:\数据库\MSDS" --query "二丙二醇" --hits --summary
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" --query "二丙二醇" --hits --summary
 
 # 13. 只查某批次型号 + 检索 (BL/OS 型号里查"供应商"标签) → TSV
-.\batch-read.ps1 "F:\数据库\MSDS" --query "供应商" --scope label --name-filter BL,OS --tsv
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" --query "供应商" --scope label --name-filter BL,OS --tsv
 
 # 14. 多关键词 OR (命中任一词即算; 默认 AND 全词命中)
-.\batch-read.ps1 "F:\数据库\MSDS" --query "危险 警示" --any --hits
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" --query "危险 警示" --any --hits
 
 # 15. 按节号精确检索 (scope=section 精确匹配, 等价于按节筛)
-.\batch-read.ps1 "F:\数据库\MSDS\中文" --query 9 --scope section --tsv --out s9.tsv
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS\中文" --query 9 --scope section --tsv --out s9.tsv
 ```
 
 ## 参数
@@ -149,33 +149,33 @@ python "F:\...\批量化读取\export_excel.py" "F:\...\MSDS数据库.sqlite" -o
 
 ### 任务 1: 批量核对某批 MSDS 的 S3 成分表
 ```powershell
-.\batch-read.ps1 "F:\数据库\MSDS\中文" --sections 3 --tsv --out 成分表.tsv --summary
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS\中文" --sections 3 --tsv --out 成分表.tsv --summary
 ```
 TSV 列: 文件名 | 节 | 大标题 | 小标题 | 标签 | 内容。成分行内容形如
 `成分名 | CAS: xxx | 含量: y%`, 占位符 CAS (商业机密/Trade secret) 原样保留。
 
 ### 任务 2: 找出缺失节 / 有异常的 MSDS
 ```powershell
-.\batch-read.ps1 "F:\数据库\MSDS" --report scan.json --summary --quiet
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" --report scan.json --summary --quiet
 ```
 汇总表列出缺失节文件与异常分布; 报告 JSON 里 `files[].missing_sections` /
 `files[].anomalies` 可程序化消费。
 
 ### 任务 3: 批量提取某字段值 (如 S1 产品名称)
 ```powershell
-.\batch-read.ps1 "F:\数据库\MSDS\英文" --sections 1 --query "Product name" --scope label --tsv --out names.tsv
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS\英文" --sections 1 --query "Product name" --scope label --tsv --out names.tsv
 ```
 
 ### 任务 4: 完整性审计 (token 级, 确认无内容遗漏)
 ```powershell
-.\batch-read.ps1 "F:\数据库\MSDS" --verify --report integrity.json --summary --quiet
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" --verify --report integrity.json --summary --quiet
 ```
 报告里 `files[].verify.missing_count` = 该文件解析结果与原文逐 token 比对的遗漏数,
 >0 表示有内容未解析出来 (需回查解析器兼容性)。
 
 ### 任务 5: 生成"文档 × 字段"对比矩阵 (与 reader 显示同构)
 ```powershell
-.\batch-read.ps1 "F:\数据库\MSDS\中文" --matrix --out 对比表.xlsx --summary
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS\中文" --matrix --out 对比表.xlsx --summary
 ```
 - 每行 = 一个文档, 每列 = 一个字段; **列顺序 = (节号, 节内 reader 上下顺序)**,
   与 reader 三列表呈现完全一致。
@@ -193,7 +193,7 @@ TSV 列: 文件名 | 节 | 大标题 | 小标题 | 标签 | 内容。成分行�
 
 ### 任务 6: 矩阵 + 值状态三态列 (区分"无数据"与"无此字段")
 ```powershell
-.\batch-read.ps1 "F:\数据库\MSDS\中文" --matrix --states --out 对比表_带状态.xlsx
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS\中文" --matrix --states --out 对比表_带状态.xlsx
 ```
 - 每个字段列后跟一个 `·状态` 列, 取值三态:
   - `有值` — 原文有内容 (浅绿底 + 绿字)
@@ -204,13 +204,13 @@ TSV 列: 文件名 | 节 | 大标题 | 小标题 | 标签 | 内容。成分行�
 ### 任务 7: 成分分列输出 (数据库入库)
 ```powershell
 # TSV: 每文档一行, 列 = 成分1|CAS1|含量1|成分2|CAS2|含量2|... (最多成分数定列数)
-.\batch-read.ps1 "F:\数据库\MSDS\中文" --sections 3 --comp-cols --tsv --out 成分分列.tsv
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS\中文" --sections 3 --comp-cols --tsv --out 成分分列.tsv
 
 # JSON: {文件名: [{name, cas, conc}, ...]} 直接可入库
-.\batch-read.ps1 "F:\数据库\MSDS" --comp-cols --json --out 成分分列.json
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" --comp-cols --json --out 成分分列.json
 
 # 配合 --query 检索: 命中成分的文件也按分列输出
-.\batch-read.ps1 "F:\数据库\MSDS" --comp-cols --json --query "二丙二醇"
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" --comp-cols --json --query "二丙二醇"
 ```
 - 只动**输出层**; reader GUI 显示 (三列表格) 与核心解析 (core/docx_reader、
   core/structure 的 ComponentData) 完全不变。
@@ -219,18 +219,18 @@ TSV 列: 文件名 | 节 | 大标题 | 小标题 | 标签 | 内容。成分行�
 ### 任务 8: 批量化检索 — 全库定位含某内容的文件
 ```powershell
 # 1. 哪些文件含"二丙二醇", 各命中几处 (命中清单, 按命中数降序)
-.\batch-read.ps1 "F:\数据库\MSDS" --query "二丙二醇" --hits --summary
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" --query "二丙二醇" --hits --summary
 #   输出: 命中条目数<TAB>文件名 ... 末尾 "命中文件 X / Y | 命中条目 Z"
 
 # 2. 只查某批次型号 (BL/OS) 里标签含"供应商"的字段 → TSV 核对
-.\batch-read.ps1 "F:\数据库\MSDS" --query "供应商" --scope label \
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" --query "供应商" --scope label \
     --name-filter BL,OS --tsv --out bl_os_供应商.tsv
 
 # 3. 多关键词 OR (成分检索: 含"二丙二醇"或"乙二醇丁醚"任一)
-.\batch-read.ps1 "F:\数据库\MSDS" --query "二丙二醇 乙二醇丁醚" --any --hits
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" --query "二丙二醇 乙二醇丁醚" --any --hits
 
 # 4. 检索+报告: 命中文件清单和 JSON 报告同时出 (报告默认不含条目全文)
-.\batch-read.ps1 "F:\数据库\MSDS" --query "供应商" --scope label \
+.\batch-read.ps1 "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" --query "供应商" --scope label \
     --hits --summary --report scan_检索.json --quiet
 ```
 - **命中含义**: 检索时条目数 = 该文件命中条数; 0 命中的文件默认不输出
@@ -241,8 +241,8 @@ TSV 列: 文件名 | 节 | 大标题 | 小标题 | 标签 | 内容。成分行�
 ### 任务 9: 构建标准数据库 (为推断/分析)
 ```bash
 # 全库 646 → SQLite 三表 (documents/components/fields)
-python "F:\正式项目与模块化内容\Word 覆写模块\结构读取\批量化读取\build_db.py" \
-  "F:\正式项目与模块化内容\Word 覆写模块\数据库\MSDS" -o MSDS数据库.sqlite
+python "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\结构读取\批量化读取\build_db.py" \
+  "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\MSDS" -o MSDS数据库.sqlite
 
 # 小批量试建
 python build_db.py "...\MSDS" -o t.db --limit 20
@@ -254,6 +254,39 @@ python build_db.py "...\MSDS" -o t.db --limit 20
   归一化 (中英文/异写收敛: 安全储存条件 ↔ Safe storage conditions 等)
 - **归一化**: 全节中英收敛, 标准字段覆盖 76.6%; 未命中多为合理保留的值字段
   (毒理数据表列/手套材料选项/EU 生态数据项)
+
+### 任务 10: 标准字段库入库 (msds_standard.db 四表) — 批量洗数据主入口
+
+> **结构冻结强制** (用户确认 2026-08-17): 父子级结构及标签字段已**写死固定**
+> (`core/schema.py` + `core/msds_db._SKELETON` + 结构指纹 `STRUCT_FINGERPRINT`
+> 校验)。每次运行 `build_msds_db.py` 强制校验冻结结构, 不一致即拒绝入库 —
+> **严禁修改 schema/骨架**, 批量洗数据只能填充数据, 不能动结构。
+
+```powershell
+# 1. 首次建库 / 重建 (结构变更后) — 全表重建, 清空旧数据
+python "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\结构读取\tools\build_msds_db.py" `
+  "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\正式库\Data Base\msds_standard.db" --init
+
+# 2. 批量入库: 目录/多文件 → 全部按冻结骨架归一化入库
+python "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\结构读取\tools\build_msds_db.py" `
+  "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\正式库\Data Base\msds_standard.db" `
+  "F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\数据库\正式库\入库word  第一批"
+
+# 3. 入库验证 (型号/明细/结构/检索)
+python ...\build_msds_db.py <db> --models
+python ...\build_msds_db.py <db> --model PEA-4139 --sections 8
+python ...\build_msds_db.py <db> --model-search 关键词
+```
+
+**入库规则 (强制性, 详见《数据导入-入库指引及强制性规范》)**:
+- **基于结构找内容**: 数据按 17 节骨架 (定稿模板参照 + 飞书清单字段) 一一对应填,
+  结构永不随数据变化; 展示/检索输出全部骨架化 (docx 直读 = 数据库检索 = 同一结构)
+- **清单外字段一律丢弃** (写无数据, 不扩结构); 有内容才显示, 无内容写「无数据」
+- 父级 (字段列空): S1 1.1 产品名称 / 1.3 供应商信息、S2 2.1 紧急情况概述、
+  S8 8.1 暴露控制 / 8.2 生物限值、S0 页眉/页脚、S3 3.2 成分
+- 子表: S3 成分 (表头 成分|CAS|含量)、S8.2 生物限值 (5 列); 无数据预留空行
+- 总结句/说明槽位 (13): 无内容写「无数据」; S15 说明段显示说明文字
+- 入库后必须 `--models` 核对型号、抽查 2-3 节结构、跑一次检索验证
 
 ## 输出解读
 
