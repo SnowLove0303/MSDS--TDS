@@ -1005,9 +1005,14 @@ def listed_section_rows(conn: sqlite3.Connection, model_id: int,
                 out.append(SectionRow(kind="note", label=ntype,
                                       value=v or _ND, editable=True, span=True))
             else:
-                # 独立说明行 (S15 其它的规定/符合下列法规要求): 固定标签, 值无数据
+                # 独立说明段 (S15 其它的规定/符合下列法规要求): 跨表格列字段判定,
+                # 显示说明文字本身 (无内容时), 有内容则显示内容 (后续增强: 跨列
+                # 自动匹配预留结构标签)
+                content = notes.get(label) or []
+                v = "\n".join(x for x in content if x and x.strip()).strip()
                 out.append(SectionRow(kind="note", label=label,
-                                      value=_ND, editable=True, span=True))
+                                      value=v or label, editable=True,
+                                      span=True))
         elif kind == "component":
             # 成分子表 (用户确认): 3 列 × N+1 行, 表头 [成分|CAS|含量], 每成分一行
             header = ["成分", "CAS", "含量"]
