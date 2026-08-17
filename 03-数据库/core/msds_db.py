@@ -901,7 +901,8 @@ _SKELETON: dict[int, list[tuple]] = {
         ("field", "", "防护手套的合适材料"), ("field", "", "氟化橡胶 –FKM"),
         ("field", "", "丁基橡胶 –IIR"), ("field", "", "丁腈橡胶 – NBR"),
         ("field", "", "建议"), ("field", "", "眼睛防护"), ("field", "", "身体防护"),
-        ("subtable", "8.2", "生物限值"), ("field", "8.3", "工程控制")],
+        ("sub", "8.2", "生物限值"), ("subtable", "", "生物限值"),
+        ("field", "8.3", "工程控制")],
     9: [("field", "9.1", "外观"), ("field", "9.2", "嗅觉阈值"), ("field", "9.3", "pH值"),
         ("field", "9.4", "离子性"), ("field", "9.5", "初沸点"), ("field", "9.6", "闪点"),
         ("field", "9.7", "蒸发速率"), ("field", "9.8", "可燃性（固态、气态）"),
@@ -1032,13 +1033,13 @@ def listed_section_rows(conn: sqlite3.Connection, model_id: int,
             if subtable is not None:
                 out.append(subtable)
             else:
-                # 生物限值子表: 无数据也显示 5 列表头空表 (结构固定)
+                # 生物限值子表: 无数据也显示表头 + 预留 1 行空行 (结构固定)
                 out.append(SectionRow(
                     kind="subtable", label="生物限值", value="", editable=False,
                     span=True,
                     sub_header=["组分名称", "标准来源", "生物监测指标",
                                 "生物限值", "采样时间"],
-                    sub_rows=[]))
+                    sub_rows=[["", "", "", "", ""]]))
     return out
 
 
