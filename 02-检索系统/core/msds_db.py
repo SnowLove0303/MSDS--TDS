@@ -126,14 +126,19 @@ def wide_columns() -> list[tuple[int, str, str]]:
 
 
 def init_db(conn: sqlite3.Connection) -> list[tuple[int, str, str]]:
-    """建表 + 灌 schema_field 字典 (17 节全量), 返回宽表列定义."""
-    conn.executescript(_DDL)
-    conn.execute("DELETE FROM schema_field")
+    """全量重建: 确保框架表存在 → DROP 四表 → 建表 + 灌 schema_field 字典.
+
+    用于首次建库与 --init 重置; 调用即清空 msds_model/msds_field/msds_wide.
+    """
+    conn.executescript(_DDL)          # 首次: 框架表存在
+    for t in ("msds_wide", "msds_field", "msds_model", "schema_field"):
+        conn.execute(f"DROP TABLE IF EXISTS {t}")
+    conn.executescript(_DDL)          # 重建全部 (含空 msds_wide)
+    conn.execute("DROP TABLE IF EXISTS msds_wide")
     cols = wide_columns()
     wide_sql = ["model_id INTEGER PRIMARY KEY REFERENCES msds_model(model_id)"]
     for num, col, name in cols:
         wide_sql.append(f'"{col}" TEXT')
-    conn.execute("DROP TABLE IF EXISTS msds_wide")
     conn.execute("CREATE TABLE msds_wide (" + ", ".join(wide_sql) + ")")
 
     cur = conn.cursor()
@@ -198,8 +203,23 @@ def _subtable_text(title: str, header: list[str],
 
 
 def _wide_row_values(result, cols: list[tuple[int, str, str]]) -> dict[str, str]:
-    """Schema 归一化取值: standard_result → {宽表列名: 值} (无值列缺省 NULL)."""
-    std = standard_result(result)
+    """宽表取值: 与明细入库同一归一化管线 (_db_std_name + 清单过滤).
+
+    S11/S12 子项归并到大类、S15 任意法规名归并到「法规条目」、清单外字段丢弃 —
+    保证宽表与 msds_field 明细完全一致 (此前 standard_result 未做归并导致
+    S15 法规条目等宽表列取不到值).
+    """
+    from collections import defaultdict
+    std: dict[int, dict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
+    cur_major: dict[int, str] = {}
+    for num, sec in sorted(result.sections.items()):
+        for row in sec.iter_rows():
+            if row.kind != "field":
+                continue
+            s = _db_std_name(num, row.label, cur_major)
+            if s and s in _listed_field_names(num) and (row.value or "").strip():
+                std[num][s].append(row.value)
+
     out: dict[str, str] = {}
     for num, col, name in cols:
         vals = std.get(num, {}).get(name)
@@ -217,6 +237,48 @@ def _wide_row_values(result, cols: list[tuple[int, str, str]]) -> dict[str, str]
                     out[col] = _subtable_text(row.label, row.sub_header,
                                               row.sub_rows)
     return out
+
+
+# S12 生态大类别 (飞书清单): 子项归并上下文
+_S12_MAJOR = frozenset({"生态毒性", "持久性和降解性", "其他不利的影响"})
+
+
+def _db_std_name(num: int, label: str, cur_major: dict[int, str]) -> str:
+    """入库标准名归一化 (保证所有 field 都有统一标准名, 检索按此对齐).
+
+    - 常规: schema.standard_name (同义别名/单位剥离)
+    - S11: 子项 (方法/物种/NOAEL 等) → 当前国标大类 (11.1~11.10 上下文);
+      无大类上下文用 label 语义兜底 (s11_sub_major)
+    - S12: 子项 → 当前生态大类 (12.1~12.3 上下文)
+    - S15: 未命中 Schema 的 field (任意法规名) → "法规条目" 统一
+    """
+    std = standard_name(num, label)
+    if num == 11:
+        from .s11 import S11_MAJOR_SET, s11_sub_major
+        if label in S11_MAJOR_SET or std in S11_MAJOR_SET:
+            cur_major[11] = std if std in S11_MAJOR_SET else label
+            return cur_major[11]
+        return cur_major.get(11) or s11_sub_major(label) or std
+    if num == 12:
+        if label in _S12_MAJOR:
+            cur_major[12] = label
+            return label
+        return cur_major.get(12) or std
+    if num == 15:
+        s15_names = {f.name for f in standard_fields(15)}
+        if std not in s15_names:
+            return "法规条目"
+    return std
+
+
+# 每节清单字段名集合 (缓存): 清单外 field 行丢弃 (结构冻结)
+_FIELD_NAME_CACHE: dict[int, frozenset[str]] = {}
+
+
+def _listed_field_names(num: int) -> frozenset[str]:
+    if num not in _FIELD_NAME_CACHE:
+        _FIELD_NAME_CACHE[num] = frozenset(f.name for f in standard_fields(num))
+    return _FIELD_NAME_CACHE[num]
 
 
 def insert_docx(conn: sqlite3.Connection, path: str | Path,
@@ -238,15 +300,17 @@ def insert_docx(conn: sqlite3.Connection, path: str | Path,
         " footer=excluded.footer, sections_count=excluded.sections_count,"
         " tables_count=excluded.tables_count, fields_count=excluded.fields_count,"
         " components_count=excluded.components_count,"
-        " anomalies_count=excluded.anomalies_count",
+        " anomalies_count=excluded.anomalies_count"
+        " RETURNING model_id",
         (model, "docx", str(path), _sha256(path), result.header, result.footer,
          result.sections_count, result.tables_count,
          sum(len(s.fields) for s in result.sections.values()),
          sum(len(s.components) for s in result.sections.values()),
          len(result.anomalies)))
-    model_id = cur.lastrowid
+    model_id = cur.fetchone()[0]
     conn.execute("DELETE FROM msds_field WHERE model_id=?", (model_id,))
 
+    cur_major: dict[int, str] = {}
     for num, sec in sorted(result.sections.items()):
         for idx, row in enumerate(sec.iter_rows()):
             if row.kind == "section":
@@ -267,12 +331,16 @@ def insert_docx(conn: sqlite3.Connection, path: str | Path,
             kind = "component" if (sec.is_component_table and row.kind == "field"
                                    and not row.label) else row.kind
             ntype = classify_note(num, row.value) if kind == "note" else ""
+            std = (_db_std_name(num, row.label, cur_major) if row.kind == "field"
+                   else standard_name(num, row.label))
+            # 结构冻结: 清单外 field (std 不在该节清单字段集) → 丢弃 (写无数据, 不扩结构)
+            if row.kind == "field" and std and std not in _listed_field_names(num):
+                continue
             conn.execute(
                 "INSERT INTO msds_field"
                 " (model_id, section, seq, label, std_name, value, kind, editable, row_index, note_type)"
                 " VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (model_id, num, row.seq, row.label,
-                 standard_name(num, row.label), row.value, kind,
+                (model_id, num, row.seq, row.label, std, row.value, kind,
                  1 if row.editable else 0, idx, ntype))
     # 成分行 (S3 components) 以 kind=component 单独入库
     for num, sec in sorted(result.sections.items()):
@@ -360,9 +428,10 @@ def insert_pivot_xlsx(conn: sqlite3.Connection, path: str | Path,
     cur.execute(
         "INSERT INTO msds_model (model, source, source_file)"
         " VALUES (?,?,?)"
-        " ON CONFLICT(model, source, source_file) DO UPDATE SET model=excluded.model",
+        " ON CONFLICT(model, source, source_file) DO UPDATE SET model=excluded.model"
+        " RETURNING model_id",
         (model, "xlsx", str(path)))
-    model_id = cur.lastrowid
+    model_id = cur.fetchone()[0]
     conn.execute("DELETE FROM msds_field WHERE model_id=?", (model_id,))
 
     ridx = 0

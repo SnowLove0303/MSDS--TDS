@@ -123,6 +123,9 @@ def main() -> int:
             print(f"  {k:<34} = {vals[k][:80].replace(chr(10), ' / ')}")
         return 0
     if "--init" in rest:
+        # 真正重建表结构 (schema 变更后使用): DROP msds_wide + 重灌 schema_field
+        from core.msds_db import init_db
+        init_db(db)
         print(f"  ✅ 表结构已重建: {db_path} (schema_field 字典 {db.execute('SELECT COUNT(*) FROM schema_field').fetchone()[0]} 项)")
         return 0
 

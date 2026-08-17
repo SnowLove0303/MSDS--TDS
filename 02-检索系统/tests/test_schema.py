@@ -13,18 +13,22 @@ from core.schema import (
 
 
 def test_synonym_mapping_s2():
-    """S2 同义写法统一到标准字段."""
-    assert standard_name(2, "危险性说明") == "危害性说明"
+    """S2 同义写法统一到标准字段 (字段名 = 飞书清单)."""
+    assert standard_name(2, "危害性说明") == "危险性说明"
     assert standard_name(2, "GHS-象形图") == "象形图"
     assert standard_name(2, "GHS分类") == "GHS危险性类别"
+    # 四子列独立字段
+    assert standard_name(2, "物理和化学危险") == "物理和化学危险"
+    assert standard_name(2, "其他危险") == "其他危害"
 
 
 def test_synonym_mapping_s9():
-    """S9 理化特性同义归一 (含单位括号剥离)."""
+    """S9 理化特性同义归一 (字段名 = 飞书清单, 引燃温度独立列)."""
     assert standard_name(9, "PH值") == "pH值"
-    assert standard_name(9, "动力粘度") == "粘度"
-    assert standard_name(9, "引燃温度") == "自燃温度"
-    assert standard_name(9, "相对蒸气密度") == "蒸气密度"
+    assert standard_name(9, "粘度") == "动力粘度"
+    assert standard_name(9, "引燃温度") == "引燃温度"
+    assert standard_name(9, "蒸气密度") == "相对蒸气密度"
+    assert standard_name(9, "pH值（1%水溶液）") == "pH值"
 
 
 def test_unknown_label_passthrough():
@@ -56,16 +60,16 @@ def test_guide_line_not_field_on_read():
 
 
 def test_standard_result_merges_synonyms():
-    """standard_result 同义字段合并 (危险性说明/危害性说明 → 危害性说明)."""
+    """standard_result 同义字段合并 (危害性说明/危险性说明 → 危险性说明)."""
     p = Path(r"F:\正式项目与模块化内容\Word 覆写模块\数据库\测试库\PEA-4139 MSDS_CN 冠志 模板.docx")
     if not p.exists():
         return
     r = read_msds(p)
     res = standard_result(r)
     s2 = res.get(2, {})
-    # PEA-4139 模板用 危害性说明; 合并后不出现 危险性说明
-    assert "危害性说明" in s2
-    assert "危险性说明" not in s2
+    # PEA-4139 模板用 危害性说明; 合并后不出现 危险性说明之外的旧名
+    assert "危险性说明" in s2
+    assert "危害性说明" not in s2
     assert s2["GHS危险性类别"]
 
 

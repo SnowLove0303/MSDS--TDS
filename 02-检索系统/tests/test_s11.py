@@ -86,7 +86,7 @@ def test_subacute_to_stot_not_additional():
         ("方法", "OECD化学品测试指南408"),
     )
     g = s11_group_rows(rows)
-    assert "NOAEL" in s11_value(g, "特异性靶器官系统毒性"), "亚急性数据应归入 STOT"
+    assert "NOAEL" in s11_value(g, "特异性靶器官系统毒性（一次接触/反复接触）"), "亚急性数据应归入 STOT"
     assert s11_value(g, "附加信息") == "", "附加信息不应再被错误填充"
 
 
@@ -156,6 +156,6 @@ def test_cmr_block_after_major_groups():
     )
     g = s11_group_rows(rows)
     # 锁定块外的 STOT 带值行正常归入 STOT
-    assert "基于现有数据，未满足分类标准。" in s11_value(g, "特异性靶器官系统毒性")
+    assert "基于现有数据，未满足分类标准。" in s11_value(g, "特异性靶器官系统毒性（一次接触/反复接触）")
     # CMR 内容归入附加信息
     assert "致癌性: 基于现有数据" in s11_value(g, "附加信息")
