@@ -13,8 +13,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from core import msds_db
-from core.msds_db import (find_models, model_search, model_section_rows,
-                          model_tree_nodes, open_db, render_model_json,
+from core.msds_db import (find_models, listed_section_rows, listed_tree_nodes,
+                          model_search, open_db, render_model_json,
                           render_model_tsv, render_model_tree)
 
 TPL = ROOT / "templates" / "MSDS_CN 国彩 模板.docx"
@@ -43,25 +43,30 @@ def test_find_models_fuzzy(conn):
 
 
 def test_tree_s2_flat_parents(conn):
-    """S2: 序号行均为独立父级 (2.1~2.6 平级), 2.3 信号词不挂 2.2 下."""
+    """S2: 定稿模板结构 — 序号行均为独立父级 (2.1~2.9 平级, 含四子列)."""
     c, mid = conn
-    nodes = model_tree_nodes(c, mid, {2})
+    nodes = listed_tree_nodes(c, mid, {2})
     assert len(nodes) == 1
     sn = nodes[0]
     titles = [(b.seq, b.title) for b in sn.big_titles]
-    assert ("2.1", "GHS危险性类别") in titles
-    assert ("2.3", "信号词") in titles
-    assert ("2.4", "危险性说明") in titles
+    assert ("2.1", "紧急情况概述") in titles
+    assert ("2.2", "GHS危险性类别") in titles
+    assert ("2.4", "信号词") in titles
+    assert ("2.5", "危险性说明") in titles
     assert ("2.5", "防范说明") in titles
-    # 2.2 标签要素是空值父级, 象形图挂其下
-    b22 = next(b for b in sn.big_titles if b.seq == "2.2")
-    assert any(c2.label == "GHS象形图" for c2 in b22.children)
+    assert ("2.6", "物理和化学危险") in titles
+    assert ("2.7", "健康危害") in titles
+    assert ("2.8", "环境危害") in titles
+    assert ("2.9", "其他危害") in titles
+    # 2.3 GHS标签要素 是带值字段, 象形图挂其下
+    b23 = next(b for b in sn.big_titles if b.seq == "2.3")
+    assert any(c2.label == "GHS象形图" for c2 in b23.children)
 
 
 def test_tree_s9_seq_parents(conn):
     """S9: 9.1~9.23 各自独立父级且带值 (序号行 = 父级)."""
     c, mid = conn
-    nodes = model_tree_nodes(c, mid, {9})
+    nodes = listed_tree_nodes(c, mid, {9})
     sn = nodes[0]
     seqs = [b.seq for b in sn.big_titles]
     assert "9.1" in seqs and "9.23" in seqs
@@ -72,7 +77,7 @@ def test_tree_s9_seq_parents(conn):
 def test_s11_merged_major(conn):
     """S11: 字段行归并为国标大类 (11.1~11.10), 总结句保留."""
     c, mid = conn
-    nodes = model_tree_nodes(c, mid, {11})
+    nodes = listed_tree_nodes(c, mid, {11})
     sn = nodes[0]
     titles = [b.title for b in sn.big_titles]
     assert "急性毒性" in titles
@@ -84,9 +89,9 @@ def test_s11_merged_major(conn):
 
 
 def test_section_rows_s11(conn):
-    """model_section_rows: S11 归并行为 11 大类 + note 槽位 (产品说明/引导段)."""
+    """listed_section_rows: S11 骨架 — 11 大类 + note 槽位 (产品说明/引导段)."""
     c, mid = conn
-    rows = model_section_rows(c, mid, 11)
+    rows = listed_section_rows(c, mid, 11)
     kinds = {r.kind for r in rows}
     assert "note" in kinds
     notes = [r for r in rows if r.kind == "note"]
@@ -132,7 +137,8 @@ def test_section_rows_subtable(tmp_path):
     path = tmp_path / "t2.db"
     c = open_db(str(path))
     mid = msds_db.insert_docx(c, str(ec), msds_db.wide_columns())
-    rows = model_section_rows(c, mid, 8)
+    rows = listed_section_rows(c, mid, 8)
     sub = [r for r in rows if r.kind == "subtable"]
     assert sub
     assert sub[0].sub_header and "组分名称" in sub[0].sub_header
+

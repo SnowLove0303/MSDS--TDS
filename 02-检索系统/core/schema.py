@@ -55,6 +55,7 @@ SECTION_SCHEMAS: dict[int, list[SchemaField]] = {
         SchemaField("传真", aliases=("Fax",)),
     ],
     2: [
+        SchemaField("紧急情况概述", kind="sub"),   # 定稿模板 2.1 父级 (参照)
         SchemaField("GHS危险性类别", aliases=("GHS分类", "危险性分类", "GHS危险性", "GHS hazard category",
                                       "CHS hazard category", "Hazard classification", "GHS risk category",
                                       "GHS Classification", "根据GHS不属于危害化学品", "无危险",
@@ -169,6 +170,9 @@ SECTION_SCHEMAS: dict[int, list[SchemaField]] = {
         SchemaField("化学稳定性", aliases=("稳定性", "Chemical stability")),
         SchemaField("危险分解产物", aliases=("分解产物", "危险的分解产物", "Hazardous decomposition products")),
         SchemaField("可能的危害反应", aliases=("反应性", "危险反应", "Possible hazardous reactions", "Reactivity")),
+        SchemaField("应避免的条件", aliases=("避免条件", "Conditions to be avoided",
+                                    "Thermal decomposition / conditions to be avoided")),
+        SchemaField("禁配物", aliases=("不相容的材料", "不相容物质", "Incompatible materials")),
     ],
     11: [
         SchemaField("急性毒性", aliases=("Acute toxicity", "Acute oral toxicity", "急性毒性，经口", "急性毒性，经皮", "急性毒性，吸入")),
