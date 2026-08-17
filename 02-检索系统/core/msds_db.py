@@ -879,8 +879,8 @@ _SKELETON: dict[int, list[tuple]] = {
     0: [("sub", "0.1", "页眉"), ("field", "", "Version"), ("field", "", "产品名称"),
         ("sub", "0.2", "页脚"), ("field", "", "公司名称"), ("field", "", "产品型号"),
         ("field", "", "修订日期"), ("field", "", "页码")],
-    1: [("field", "1.1", "产品名称"), ("field", "", "中文名称"), ("field", "", "化学品分类"),
-        ("field", "1.2", "产品使用建议和使用限制"), ("field", "1.3", "供应商信息"),
+    1: [("sub", "1.1", "产品名称"), ("field", "", "中文名称"), ("field", "", "化学品分类"),
+        ("field", "1.2", "产品使用建议和使用限制"), ("sub", "1.3", "供应商信息"),
         ("field", "", "供应商名称"), ("field", "", "供应商地址"),
         ("field", "", "电话"), ("field", "", "传真")],
     2: [("sub", "2.1", "紧急情况概述"), ("field", "2.2", "GHS危险性类别"),
@@ -897,7 +897,7 @@ _SKELETON: dict[int, list[tuple]] = {
     6: [("field", "6.1", "个人预防措施、应急程序"), ("field", "6.2", "环境保护措施"),
         ("field", "6.3", "污染物收集和清除的方法")],
     7: [("field", "7.1", "安全操作防范"), ("field", "7.2", "安全储存条件")],
-    8: [("field", "8.1", "暴露控制"), ("field", "", "呼吸系统防护"), ("field", "", "手部防护"),
+    8: [("sub", "8.1", "暴露控制"), ("field", "", "呼吸系统防护"), ("field", "", "手部防护"),
         ("field", "", "防护手套的合适材料"), ("field", "", "氟化橡胶 –FKM"),
         ("field", "", "丁基橡胶 –IIR"), ("field", "", "丁腈橡胶 – NBR"),
         ("field", "", "建议"), ("field", "", "眼睛防护"), ("field", "", "身体防护"),
@@ -1009,14 +1009,20 @@ def listed_section_rows(conn: sqlite3.Connection, model_id: int,
                 out.append(SectionRow(kind="note", label=label,
                                       value=_ND, editable=True, span=True))
         elif kind == "component":
-            # 成分: 每成分一行, 名称标签列 + CAS/含量 字段列分行
-            for ci, c in enumerate(comps, 1):
-                v = c.value.replace(" | ", "\n")   # "CAS: x | 含量: y" → 两行
-                out.append(SectionRow(kind="field", seq=f"3.2.{ci}",
-                                      label=c.label, value=v, editable=True))
-            if not comps:
-                out.append(SectionRow(kind="note", label="成分",
-                                      value=_ND, editable=True, span=True))
+            # 成分子表 (用户确认): 3 列 × N+1 行, 表头 [成分|CAS|含量], 每成分一行
+            header = ["成分", "CAS", "含量"]
+            rows: list[list[str]] = []
+            for c in comps:
+                cas = conc = ""
+                for part in (c.value or "").split(" | "):
+                    if part.startswith("CAS:"):
+                        cas = part[4:].strip()
+                    elif part.startswith("含量:"):
+                        conc = part[3:].strip()
+                rows.append([c.label, cas, conc])
+            out.append(SectionRow(
+                kind="subtable", label="成分", value="", editable=False,
+                span=True, sub_header=header, sub_rows=rows))
         elif kind == "subtable":
             if subtable is not None:
                 out.append(subtable)
