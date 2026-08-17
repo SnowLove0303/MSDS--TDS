@@ -440,6 +440,8 @@ def insert_pivot_xlsx(conn: sqlite3.Connection, path: str | Path,
     conn.execute("DELETE FROM msds_field WHERE model_id=?", (model_id,))
 
     ridx = 0
+    comps: dict[int, dict[str, str]] = {}   # 成分槽: {idx: {name/cas/conc}}
+    _comp_slot_re = re.compile(r"^成分(\d+)(名称|CAS|含量)$")
     for ci in range(2, ncol + 1):
         sec = sec_of_col.get(ci)
         label_raw = str(ws.cell(2, ci).value or "").strip()
@@ -459,12 +461,32 @@ def insert_pivot_xlsx(conn: sqlite3.Connection, path: str | Path,
                      classify_note(sec, ln)))
                 ridx += 1
             continue
+        m = _comp_slot_re.match(label)
+        if m:
+            # 成分槽列 (成分N名称/CAS/含量) → 组合为 component 行 (S3 结构)
+            comps.setdefault(int(m.group(1)), {})[m.group(2)] = val
+            continue
         conn.execute(
             "INSERT INTO msds_field"
             " (model_id, section, seq, label, std_name, value, kind, editable, row_index)"
             " VALUES (?,?,?,?,?,?,?,?,?)",
             (model_id, sec, seq, label, standard_name(sec, label), val, "field",
              1, ridx))
+        ridx += 1
+
+    # 成分槽 (S3): 组合后的 component 行入库
+    for idx in sorted(comps):
+        c = comps[idx]
+        name = (c.get("名称") or "").strip()
+        if not name:
+            continue
+        conn.execute(
+            "INSERT INTO msds_field"
+            " (model_id, section, seq, label, std_name, value, kind, editable, row_index)"
+            " VALUES (?,?,?,?,?,?,?,?,?)",
+            (model_id, 3, "3.2", name, standard_name(3, name),
+             f"CAS: {c.get('CAS', '')} | 含量: {c.get('含量', '')}",
+             "component", 1, ridx))
         ridx += 1
 
     # 宽表: 透视表值按标准字段归并 (同标签多列合并到同列, 取首个非空)
@@ -908,8 +930,8 @@ _SKELETON: dict[int, list[tuple]] = {
          ("field", "", "处理方法")],
     14: [("field", "14.1", "公路和铁路运输"), ("field", "14.2", "海上运输"),
          ("field", "14.3", "空运"), ("field", "14.4", "用户特殊注意事项")],
-    15: [("note", "", "", "指引段"), ("sub", "", "其它的规定"),
-         ("sub", "", "符合下列法规要求"), ("note", "", "", "法规条目")],
+    15: [("note", "", "", "指引段"), ("note", "", "其它的规定", ""),
+         ("note", "", "符合下列法规要求", ""), ("note", "", "", "法规条目")],
     16: [("note", "", "", "免责声明")],
 }
 
@@ -946,6 +968,16 @@ def listed_section_rows(conn: sqlite3.Connection, model_id: int,
                                   sub_header=json.loads(sub_header or "[]"),
                                   sub_rows=json.loads(sub_rows or "[]"))
     out: list[SectionRow] = []
+    # S1: 产品名称若为纯型号 → 与中文名称合并 (参照 PEA-4139 模板)
+    if num == 1:
+        model = conn.execute("SELECT model FROM msds_model WHERE model_id=?",
+                             (model_id,)).fetchone()[0]
+        pname = (by_std.get("产品名称") or [""])[0].strip()
+        if pname and pname == model:
+            cname = (by_std.get("中文名称") or [""])[0].strip()
+            if cname and model not in cname:
+                by_std["中文名称"] = [f"{cname} {model}"]
+            by_std["产品名称"] = [""]
     for item in _SKELETON.get(num, []):
         kind, seq, label = item[0], item[1], item[2]
         ntype = item[3] if len(item) > 3 else ""
@@ -967,13 +999,21 @@ def listed_section_rows(conn: sqlite3.Connection, model_id: int,
                 if not items:
                     out.append(SectionRow(kind="note", label="法规条目",
                                           value=_ND, editable=True, span=True))
-            else:
+            elif ntype:
                 vals = notes.get(ntype) or []
                 v = "\n".join(x for x in vals if x and x.strip()).strip()
                 out.append(SectionRow(kind="note", label=ntype,
                                       value=v or _ND, editable=True, span=True))
+            else:
+                # 独立说明行 (S15 其它的规定/符合下列法规要求): 固定标签, 值无数据
+                out.append(SectionRow(kind="note", label=label,
+                                      value=_ND, editable=True, span=True))
         elif kind == "component":
-            out.extend(comps)
+            # 成分: 每成分一行, 名称标签列 + CAS/含量 字段列分行
+            for ci, c in enumerate(comps, 1):
+                v = c.value.replace(" | ", "\n")   # "CAS: x | 含量: y" → 两行
+                out.append(SectionRow(kind="field", seq=f"3.2.{ci}",
+                                      label=c.label, value=v, editable=True))
             if not comps:
                 out.append(SectionRow(kind="note", label="成分",
                                       value=_ND, editable=True, span=True))
@@ -981,8 +1021,13 @@ def listed_section_rows(conn: sqlite3.Connection, model_id: int,
             if subtable is not None:
                 out.append(subtable)
             else:
-                out.append(SectionRow(kind="note", label="生物限值",
-                                      value=_ND, editable=True, span=True))
+                # 生物限值子表: 无数据也显示 5 列表头空表 (结构固定)
+                out.append(SectionRow(
+                    kind="subtable", label="生物限值", value="", editable=False,
+                    span=True,
+                    sub_header=["组分名称", "标准来源", "生物监测指标",
+                                "生物限值", "采样时间"],
+                    sub_rows=[]))
     return out
 
 
