@@ -1,0 +1,922 @@
+[
+  {
+    "section": 0,
+    "title": "0.页眉页脚",
+    "big_titles": [
+      {
+        "seq": "0.1",
+        "title": "页眉",
+        "value": "",
+        "kind": "sub",
+        "editable": false,
+        "children": [
+          {
+            "label": "物料安全数据表",
+            "value": "",
+            "kind": "field",
+            "editable": false
+          },
+          {
+            "label": "Version",
+            "value": "V1.0",
+            "kind": "field",
+            "editable": false
+          },
+          {
+            "label": "产品名称",
+            "value": "PEA-4139",
+            "kind": "field",
+            "editable": true
+          }
+        ]
+      },
+      {
+        "seq": "0.2",
+        "title": "页脚",
+        "value": "",
+        "kind": "sub",
+        "editable": false,
+        "children": [
+          {
+            "label": "公司名称",
+            "value": "广州冠志新材料科技有限公司",
+            "kind": "field",
+            "editable": false
+          },
+          {
+            "label": "产品型号",
+            "value": "PEA-4139",
+            "kind": "field",
+            "editable": false
+          },
+          {
+            "label": "修订日期",
+            "value": "2026年08月05日",
+            "kind": "field",
+            "editable": false
+          },
+          {
+            "label": "页码",
+            "value": "3 / 5",
+            "kind": "field",
+            "editable": false
+          }
+        ]
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 1,
+    "title": "1.物料及供应商标识",
+    "big_titles": [
+      {
+        "seq": "1.1",
+        "title": "产品名称",
+        "value": "",
+        "kind": "field",
+        "editable": true,
+        "children": [
+          {
+            "label": "中文名称",
+            "value": "测试",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "化学品分类",
+            "value": "测试",
+            "kind": "field",
+            "editable": true
+          }
+        ]
+      },
+      {
+        "seq": "1.2",
+        "title": "产品使用建议和使用限制",
+        "value": "测试",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "1.3",
+        "title": "供应商信息",
+        "value": "",
+        "kind": "field",
+        "editable": true,
+        "children": [
+          {
+            "label": "供应商名称",
+            "value": "广州冠志新材料科技有限公司",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "供应商地址",
+            "value": "地址：广州市萝岗区科学城掬泉路3号广州国际企业孵化器A区1106室",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "电话",
+            "value": "86-20-82567990",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "传真",
+            "value": "86-20-32214789",
+            "kind": "field",
+            "editable": true
+          }
+        ]
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 2,
+    "title": "2.危险性概述",
+    "big_titles": [
+      {
+        "seq": "2.1",
+        "title": "GHS危险性类别",
+        "value": "易燃液体，类别4（H227）",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "2.2",
+        "title": "GHS标签要素",
+        "value": "",
+        "kind": "field",
+        "editable": true,
+        "children": [
+          {
+            "label": "GHS象形图",
+            "value": "无",
+            "kind": "field",
+            "editable": true
+          }
+        ]
+      },
+      {
+        "seq": "2.3",
+        "title": "信号词",
+        "value": "警告",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "2.4",
+        "title": "危险性说明",
+        "value": "H316造成轻微皮肤刺激。\nH320造成眼睛刺激。\nH332吸入有害。\nH360可能对生育能力或胎儿造成伤害。\nH370可能对器官的伤害。\nH373长期或重复暴露可能会对器官造成伤害（肝）。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "2.5",
+        "title": "防范说明",
+        "value": "预防措施：\nP210 远离热源、热表面、火花、明火和其他点火源。禁止吸烟。\nP280 戴防护手套/戴防护眼罩/戴防护面具。\nP370+P378 火灾时：使用雾状水、抗溶性泡沫、干粉或二氧化碳灭火。\nP403+P235 存放在通风良好的地方。保持低温。\nP501 按照当地法规处置内装物和容器。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "2.6",
+        "title": "其他危险",
+        "value": "喷涂使用时可能形成雾滴或气溶胶，应避免吸入。\n产品进入眼睛可能造成短暂刺激或不适。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 3,
+    "title": "3. 成分/组成资料",
+    "big_titles": [
+      {
+        "seq": "3.1",
+        "title": "产品类型",
+        "value": "混合物",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "3.2",
+        "title": "成分",
+        "value": "",
+        "kind": "sub",
+        "editable": false,
+        "children": []
+      }
+    ],
+    "fields": [
+      {
+        "label": "成分1",
+        "value": "成分1 | CAS: 商业机密 | 含量: >n",
+        "kind": "component",
+        "editable": true
+      },
+      {
+        "label": "成分2",
+        "value": "成分2 | CAS: 7732-18-5 | 含量: >45",
+        "kind": "component",
+        "editable": true
+      }
+    ]
+  },
+  {
+    "section": 4,
+    "title": "4.急救措施",
+    "big_titles": [
+      {
+        "seq": "4.1",
+        "title": "一般措施",
+        "value": "立即脱掉所有被污染的衣物。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "4.2",
+        "title": "误服",
+        "value": "若意外吞食，不要催吐，立即就医。无意识时，不要经口喂食任何食物。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "4.3",
+        "title": "接触眼睛",
+        "value": "立即翻起上下眼睑用大量缓和流动的水清洗眼睛至少20 分钟。且将头倾斜，避免化学品流入另一只未受污染的眼睛，并立即就医。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "4.4",
+        "title": "接触皮肤",
+        "value": "立即用肥皂和大量的水冲洗。若发生皮肤反应，就医。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "4.5",
+        "title": "吸入",
+        "value": "一旦吸入，如有不适，就医。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 5,
+    "title": "5.消防措施",
+    "big_titles": [
+      {
+        "seq": "5.1",
+        "title": "合适的灭火剂",
+        "value": "二氧化碳（CO2），耐醇泡沫，化学干粉。大火时应用水喷洒。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "5.2",
+        "title": "不合适的灭火剂",
+        "value": "高流量的水喷射。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "5.3",
+        "title": "物质或混合物的特殊危害",
+        "value": "燃烧时释放一氧化碳、二氧化碳、氮氧化物等。\n在着火或爆炸情况下，不要吸进烟尘。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "5.4",
+        "title": "消防预防措施和保护设备",
+        "value": "消防人员必须佩戴自供气式呼吸器。\n禁止污染的灭火用水流入土壤，地下水或地表水中。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 6,
+    "title": "6.意外泄漏措施",
+    "big_titles": [
+      {
+        "seq": "6.1",
+        "title": "个人预防措施、应急程序",
+        "value": "戴防护设备。确保充分的通风/排气。\n令未授权人员离开。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "6.2",
+        "title": "环境保护措施",
+        "value": "禁止排入下水道，废水或土壤中。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "6.3",
+        "title": "污染物收集和清除的方法",
+        "value": "用化学品吸收材料或必要时用干沙收集，并储存于密闭容器中。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 7,
+    "title": "7.操作和储存",
+    "big_titles": [
+      {
+        "seq": "7.1",
+        "title": "安全操作防范",
+        "value": "在具有适当排气通风的场所使用。避免与皮肤和眼睛接触。不要呼吸蒸气或喷雾。远离食物，饮料和烟草，休息前及工作结束及时洗手。更换被污染或浸湿的衣物。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "7.2",
+        "title": "安全储存条件",
+        "value": "容器保持紧闭，存储在凉爽通风处。为保证产品质量，必须遵守我们产品信息表的储存条件。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 8,
+    "title": "8.接触控制/个人防护",
+    "big_titles": [
+      {
+        "seq": "8.1",
+        "title": "暴露控制",
+        "value": "",
+        "kind": "sub",
+        "editable": false,
+        "children": [
+          {
+            "label": "呼吸系统防护",
+            "value": "喷涂过程中要求有呼吸防护设备。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "手部防护",
+            "value": "喷涂过程中要求有呼吸防护设备。 / 建议戴上防护手套。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "防护手套的合适材料",
+            "value": "EN 374-3",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "氟化橡胶 –FKM",
+            "value": "厚度≧0.4mm；穿透时间≧480min.",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "丁基橡胶 –IIR",
+            "value": "厚度≧0.5mm；穿透时间≧480min.",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "丁腈橡胶 – NBR",
+            "value": "厚度≧0.35mm；穿透时间≧480min.",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "建议",
+            "value": "污染的手套应废弃。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "眼睛防护",
+            "value": "戴护目镜/面罩。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "身体防护",
+            "value": "穿着适当的防护服。",
+            "kind": "field",
+            "editable": true
+          }
+        ]
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 9,
+    "title": "9. 物理和化学特性",
+    "big_titles": [
+      {
+        "seq": "9.1",
+        "title": "外观",
+        "value": "乳白色液体",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.2",
+        "title": "嗅觉阈值",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.3",
+        "title": "pH值（1%水溶液）",
+        "value": "7-9",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.4",
+        "title": "离子性",
+        "value": "非离子",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.5",
+        "title": "初沸点",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.6",
+        "title": "闪点",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.7",
+        "title": "蒸发速率",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.8",
+        "title": "可燃性（固态、气态）",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.9",
+        "title": "燃烧值",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.10",
+        "title": "饱和蒸气压",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.11",
+        "title": "相对蒸气密度",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.12",
+        "title": "密度",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.13",
+        "title": "水溶性",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.14",
+        "title": "表面张力",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.15",
+        "title": "辛醇/水分配系数对数值",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.16",
+        "title": "自燃温度",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.17",
+        "title": "引燃温度",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.18",
+        "title": "分解温度",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.19",
+        "title": "动力粘度",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.20",
+        "title": "爆炸特性",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.21",
+        "title": "粉尘爆炸级别",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.22",
+        "title": "固体含量",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.23",
+        "title": "其他信息",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 10,
+    "title": "10.稳定性和反应性",
+    "big_titles": [
+      {
+        "seq": "10.1",
+        "title": "化学稳定性",
+        "value": "在推荐储存和操作条件下稳定。避免冻结、过热和长期阳光照射。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "10.2",
+        "title": "危险分解产物",
+        "value": "受热分解或燃烧可能产生一氧化碳、二氧化碳、氮氧化物及刺激性烟气。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "10.3",
+        "title": "可能的危害反应",
+        "value": "正常使用条件下无已知危险反应；避免与强氧化剂、强酸和强碱接触。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 11,
+    "title": "11.毒性资料",
+    "big_titles": [
+      {
+        "seq": "11.1",
+        "title": "急性毒性",
+        "value": "经口： 半数致死剂量（LD50）/大鼠：约3,306 mg/kg。\n吸入： 半数致死浓度（LC50）/4 h/大鼠： ＞1.5 mg/L（气溶胶）。\n经皮： 半数致死剂量（LD50）/兔：2,764 mg/kg。\n根据现有数据，二乙二醇单丁醚未达到急性经口、 经皮或气溶胶吸入毒性的分类标准。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.2",
+        "title": "主要皮肤刺激性",
+        "value": "物种：兔子\n分类：根据现有数据，不属于皮肤腐蚀或皮肤刺激类\n结果：长时间或反复接触可能造成皮肤干燥",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.3",
+        "title": "主要眼睛刺激性",
+        "value": "物种：兔子\n分类：刺激眼睛\n结果：未稀释的二乙二醇单丁醚可造成明显眼睛刺激，",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.4",
+        "title": "致敏性",
+        "value": "物种：豚鼠\n分类：根据现有资料，不属于皮肤致敏物质\n结果：动物试验中未观察到皮肤过敏反应。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.5",
+        "title": "致突变性",
+        "value": "多数细菌回复突变试验及染色体畸变试验结果为阴性。 部分体外基因突变试验结果存在差异。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.6",
+        "title": "致癌性",
+        "value": "在动物试验中未见致癌影响。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.7",
+        "title": "生殖毒性",
+        "value": "根据现有动物试验，二乙二醇单丁醚未表现出明显的 生育能力损害、致畸作用或发育毒性。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.8",
+        "title": "特异性靶器官系统毒性",
+        "value": "根据现有资料，未达到特异性靶器官毒性 一次接触的分类标准。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.9",
+        "title": "吸入危险",
+        "value": "无数据资料。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.10",
+        "title": "附加信息",
+        "value": "眼睛接触可能造成明显刺激、发红及疼痛。\n长时间或反复皮肤接触可能造成轻微刺激、 皮肤发红或皮肤干燥。\n正常温度下蒸气压较低，单次蒸气暴露通常不预期造成明显不良影响；\n喷涂、加热或形成气溶胶时， 应保持良好通风并避免吸入。 误食较大剂量可能造成不适。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": [
+      {
+        "label": "",
+        "value": "该产品无可用的毒理学研究。",
+        "kind": "note",
+        "editable": true
+      },
+      {
+        "label": "",
+        "value": "以下为二乙二醇单丁醚 （CAS号：112-34-5）的毒理学参考数据：",
+        "kind": "note",
+        "editable": true
+      }
+    ]
+  },
+  {
+    "section": 12,
+    "title": "12.生态信息",
+    "big_titles": [
+      {
+        "seq": "12.1",
+        "title": "生态毒性",
+        "value": "对鱼类的毒性：\n半数致死浓度（LC50）/96 h/ 蓝鳃太阳鱼：1,300 mg/L",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "12.1",
+        "title": "生态毒性",
+        "value": "其他：\n生物量半数有效浓度（EbC50）/96 h/ 绿藻：＞100 mg/L。 半数有效浓度（EC50）/48 h/ 大型溞：＞100 mg/L。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "12.2",
+        "title": "持久性和降解性",
+        "value": "生物降解率：89%—93%，28 d\n试验方法：OECD 301C或等效方法。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "12.3",
+        "title": "其他不利的影响",
+        "value": "无数据资料。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": [
+      {
+        "label": "",
+        "value": "该产品无可用的生态毒理学研究。",
+        "kind": "note",
+        "editable": true
+      },
+      {
+        "label": "",
+        "value": "以下为二乙二醇单丁醚 （CAS号：112-34-5）的生态毒理学参考数据：",
+        "kind": "note",
+        "editable": true
+      }
+    ]
+  },
+  {
+    "section": 13,
+    "title": "13. 处理注意事项",
+    "big_titles": [],
+    "fields": [
+      {
+        "label": "",
+        "value": "必须遵守适用的国标、国家或当地法规进行废弃。",
+        "kind": "note",
+        "editable": true
+      },
+      {
+        "label": "",
+        "value": "在欧盟领域内废弃，应根据欧洲废弃物分类（EWC）的适当法规。",
+        "kind": "note",
+        "editable": true
+      },
+      {
+        "label": "处理方法",
+        "value": "尽可能将容器倒空（例如经倾倒，刮擦或排干直至“滴干”）\n可根据化学工业现存的回收方案送往适当的收集点处理。\n容器应按照国家法令和环境相关法规进行回收。\n不能将废弃物通过废水排放。",
+        "kind": "field",
+        "editable": true
+      }
+    ]
+  },
+  {
+    "section": 14,
+    "title": "14. 运输信息",
+    "big_titles": [
+      {
+        "seq": "14.1",
+        "title": "公路和铁路运输",
+        "value": "非危险品陆运输方式。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "14.2",
+        "title": "海上运输",
+        "value": "非危险品海运方式。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "14.3",
+        "title": "空运",
+        "value": "非危险品运输方式。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "14.4",
+        "title": "用户特殊注意事项",
+        "value": "非危险货物。\n避免温度高于+35℃，温度不可低于+5℃。\n远离食物、酸和碱。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 15,
+    "title": "15. 法规信息",
+    "big_titles": [],
+    "fields": [
+      {
+        "label": "",
+        "value": "物质或混合物的相关安全、健康和环保法律法规",
+        "kind": "note",
+        "editable": true
+      },
+      {
+        "label": "其它的规定",
+        "value": "",
+        "kind": "field",
+        "editable": true
+      },
+      {
+        "label": "符合下列法规要求",
+        "value": "危险化学品安全管理条例，国务院令591号\nGB/T 16483 化学品安全技术说明书内容和项目顺序\nGB 13690 化学品分类和危险性公示通则\nGB 30000.2-29 化学品分类和标签规范\nGB 15258 化学品安全标签编写规定",
+        "kind": "field",
+        "editable": true
+      }
+    ]
+  },
+  {
+    "section": 16,
+    "title": "16. 其他信息",
+    "big_titles": [],
+    "fields": [
+      {
+        "label": "",
+        "value": "就我们所掌握的知识信息，截止本安全技术说明书发布之日，它提供的资料是正确的。所提供的信息仅仅作为安全处理，使用，生产，储存，运输，处置和排放的指导书，而不是一份担保或品质说明书。本资料只针对所指定的具体物料，而对这种物料与其它物料混合使用或在其它制程中使用的情况，则未必有效（除非在文本中有特别说明）。",
+        "kind": "note",
+        "editable": true
+      }
+    ]
+  }
+]

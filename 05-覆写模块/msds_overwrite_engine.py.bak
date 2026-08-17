@@ -1,0 +1,1226 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+MSDS 覆写引擎（增删查改） —— 以写入项为准
+==========================================
+依赖：结构读取 的 core.extract.read_msds（只读检索，用于“查”与“闭环校验”）
+
+覆写原则（以写入项为准）：
+  - 每个 section 按“写入项顺序”重建字段行：字段顺序 = 真实文件顺序，seq = 写入项原始序号；
+  - 改：模板已有该标签 → 复用模板原行（格式继承），但标签格也用“写入项的 seq+标签”重建，值格覆写；
+  - 增：模板没有该标签 → 克隆同 section 参考行（deepcopy，格式继承），标签/值格覆写；
+  - 删：模板有但写入项没有（且不在保留清单）→ 物理删除该行 tr；
+  - 排版空格围栏：只替换文字/符号，保留参考行标签格与值格的排版空格；
+  - 校验：覆写后调用 read_msds 读回输出文档，与写入项逐字段对比。
+
+写入项 schema (JSON):
+{
+  "sections": {
+    "1": [ {"seq": "", "label": "中文名称", "value": "..."}, ... ],
+    "3": { "产品类型": "混合物",
+           "components": [{"name":"...","cas":"...","conc":"..."}, ...] },
+    "9": [ {"seq": "9.1", "label": "外观", "value": "乳白色液体"}, ... ]
+  }
+}
+
+用法:
+  python msds_overwrite_engine.py --template <模板.docx> --write-items <写入项.json> --out <输出.docx>
+"""
+
+import argparse
+import copy
+import json
+import re
+import sys
+from pathlib import Path
+
+from docx import Document
+from docx.oxml.ns import qn
+from docx.document import Document as _Document
+from docx.table import Table, _Cell
+from docx.text.paragraph import Paragraph
+from docx.oxml.table import CT_Tbl
+from docx.oxml.text.paragraph import CT_P
+
+# ---- 依赖：结构读取（MSDS 检索工具），仅用于“查”和“校验” ----
+STRUCTURE_READ_DIR = Path(r"F:\正式项目与模块化内容\Word 覆写模块\结构读取")
+if str(STRUCTURE_READ_DIR) not in sys.path:
+    sys.path.insert(0, str(STRUCTURE_READ_DIR))
+try:
+    from core.extract import read_msds, build_hierarchy
+    from core.structure import (normalize_component_name,
+                                normalize_component_cas,
+                                normalize_component_conc)
+except Exception as e:  # pragma: no cover
+    read_msds = None
+    print(f"[WARN] 无法导入结构读取工具（read_msds）：{e}")
+
+def _norm_comp(value, fn):
+    """用结构读取的归一化函数处理成分值；失败时降级为去空白。"""
+    try:
+        return fn(value)
+    except Exception:
+        if value is None:
+            return ""
+        return re.sub(r"\s+", "", str(value))
+
+# ---- 保留清单：固定/公司信息字段，永不参与删除 ----
+# 键为 section 号；值为该 section 中受保护的归一化标签集合。
+DEFAULT_PRESERVE = {
+    1: {"产品名称", "供应商信息", "供应商名称", "供应商地址", "电话", "传真"},
+}
+
+# ---- 参考行选择策略（新增行克隆哪个模板行的格式/排版）----
+# 取值：
+#   None / "auto"         自动：与目标 seq 相邻的模板字段行（用它的格式/排版）
+#   "last"                最后一个字段行（历史默认行为）
+#   "label:中文名称"       按标签指定（如 "label:中文名称"，跨字段也能用）
+# 也可在 overwrite(ref_pick=...) 或写入项 JSON 的 sections.<N>.ref 里覆盖。
+DEFAULT_REF_PICK = "auto"
+
+def log(msg, level="INFO"):
+    print(f"[{level}] {msg}")
+
+# ---- 字段别名：Excel/推断输出与模板写法不一致时归一化（如 阀值/阈值）----
+FIELD_ALIASES = {
+    "嗅觉阀值": "嗅觉阈值",
+}
+
+# ---- 字段映射规则层（以模板为主）----
+# 把源文件/检索输出里的字段写法，映射到模板的标准字段写法（打标签/建通道）。
+# 键=归一化后的源标签；值=归一化后的模板标签。分节维护，避免跨节误匹配。
+# 归一化规则与 norm_label 一致（去空白 + FIELD_ALIASES）。
+SECTION_FIELD_MAP = {
+    1: {},
+    2: {
+        # 源 S2 单格文本拆出的写法 → 模板 S2 标准字段
+        "GHS危险性类别": "GHS危险性类别",        # 模板 2.1
+        "物质或混合物的分类": "GHS危险性类别",    # 源 2.1 子标题 → 模板 2.1
+        "物质或混合物分类": "GHS危险性类别",
+        "标签要素": "GHS标签要素",               # 模板 2.2
+        # 源文件单格文本把"标签要素"下的内容写成"GHS-象形图 必须列在标签上的有害成份…"，
+        # 其语义是标签要素（必须列在标签上的有害成分），归并到模板 2.2 GHS标签要素。
+        "GHS-象形图": "GHS标签要素",
+        "GHS象形图": "GHS象形图",                # 模板 2.2 下（真正的象形图描述）
+        "危害性说明": "危险性说明",               # 模板 2.4
+        "防范说明": "防范说明",                   # 模板 2.5
+        "其他危险": "其他危险",                   # 模板 2.6
+    },
+    3: {},
+    9: {
+        "嗅觉阀值": "嗅觉阈值",
+        # 模板字段名比源文件更完整/规范 → 以模板为主做通道
+        "pH值": "pH值（1%水溶液）",               # 模板 9.3
+        "相对密度": "密度",                       # 模板 9.12（相对密度=密度，模板用"密度"）
+        "辛醇/水分配系数的对数值": "辛醇/水分配系数对数值",   # 模板 9.15（源多"的"）
+    },
+}
+
+# ---- 字段映射外部配置（隐患2：映射通道不锚定单个模板）----
+# 内置 SECTION_FIELD_MAP 作为兜底默认；启动时自动加载同目录 field_maps.json 合并覆盖。
+# 后续引入中英文/冠志国彩等新模板时，只需新增一份 field_maps.<模板名>.json，无需改代码。
+FIELD_MAP_FILE = Path(__file__).parent / "field_maps.json"
+
+def _load_field_map(path=None):
+    """加载外部字段映射配置并与内置合并。
+    外部配置 schema: {"2": {"GHS-象形图": "GHS标签要素"}, ...}，节号可为字符串。
+    返回合并后的完整映射 dict（不修改内置 SECTION_FIELD_MAP）。
+    """
+    merged = copy.deepcopy(SECTION_FIELD_MAP)
+    p = Path(path) if path else (FIELD_MAP_FILE if FIELD_MAP_FILE.exists() else None)
+    if p is not None:
+        try:
+            ext = json.loads(p.read_text(encoding="utf-8"))
+            n_rules = 0
+            for sec, mapping in ext.items():
+                try:
+                    sec_i = int(sec)
+                except (TypeError, ValueError):
+                    continue                    # 非数字键（如 _说明 注释）跳过
+                if not isinstance(mapping, dict):
+                    continue
+                merged.setdefault(sec_i, {}).update(mapping)
+                n_rules += len(mapping)
+            log(f"字段映射配置已加载: {p} ({n_rules} 条规则)")
+        except Exception as e:
+            log(f"字段映射配置加载失败（用内置默认）: {e}", "WARN")
+    return merged
+
+FIELD_MAP = _load_field_map()
+
+# ---- 空值覆写策略（隐患4：区分“缺字段”与“空值”）----
+# 用户语义：写入项含该字段但值为空 → 锚定并覆成空值（清空模板）。
+# 但模板可能预填了合理默认值，被清空需要可审计，因此默认 warn（覆写+告警）。
+#   overwrite  空值覆写模板（清空，不留排版空格残留）
+#   preserve   空值跳过（保留模板原值，仅“缺字段”才不动模板）
+#   warn       同 overwrite，且模板原值非空时记录 WARN
+EMPTY_POLICY_DEFAULT = "warn"
+
+# ---- keep_structure 节必需字段清单（隐患3：保留模板结构不掩盖缺字段）----
+# 这些是模板标准字段（映射目标标签），keep_structure 节若写入项缺失它们，
+# 该行会保留模板默认值（如信号词"警告"），容易被误当真实数据 → 覆写时告警。
+REQUIRED_FIELDS = {
+    2: {"GHS危险性类别", "信号词", "危险性说明", "防范说明"},
+}
+
+def map_field_label(sec_no, label):
+    """按节把源标签映射为模板标准标签；无映射则返回原标签。"""
+    nl = norm_label(label)
+    m = FIELD_MAP.get(sec_no, {})
+    target = m.get(nl)
+    if target:
+        return target
+    # 别名表（跨节）
+    return FIELD_ALIASES.get(nl, nl)
+
+def seq_key(seq):
+    """seq 字符串转版本号元组用于大小比较：'9.19'->(9,19)，'9.2'->(9,2)。"""
+    if not seq:
+        return None
+    parts = str(seq).split(".")
+    nums = []
+    for p in parts:
+        if p.isdigit():
+            nums.append(int(p))
+        else:
+            break
+    return tuple(nums)
+
+# ------------------------- 通用工具 -------------------------
+def norm_field(text):
+    """从字段行标签文本提取 (seq, label)。
+    模板示例：'9.1  外观：' -> ('9.1','外观')；'中文名称：' -> ('','中文名称')。
+    """
+    if not text:
+        return "", ""
+    s = str(text).replace("　", " ").replace("\xa0", " ").strip()
+    m = re.match(r"^(\d+(?:\.\d+)*)\s*(.*)$", s)
+    if m and m.group(2):
+        seq, rest = m.group(1), m.group(2).strip()
+    else:
+        seq, rest = "", s
+    # 去尾部冒号/标点/空白
+    rest = re.sub(r"[：:，,。；;]+$", "", rest).strip()
+    rest = rest.replace(" ", "")
+    return seq, norm_label(rest)
+
+def norm_label(s):
+    """归一化标签（供匹配）：去空白 + 别名映射。"""
+    if not s:
+        return ""
+    s = str(s).replace(" ", "").replace("　", "").replace("\xa0", "")
+    return FIELD_ALIASES.get(s, s)
+
+def _rpr_of_run(r):
+    return r._r.rPr if r is not None else None
+
+# ------------------------- 格式捕获-重放 -------------------------
+# 模板值格/标签格可能存在：多段落、多 run 混排（中文宋体+数字 Times）、
+# 超链接、字段域（页码/日期）、图片（S2 象形图/S14 标签）。
+# 覆写原则（以模板格式为准）：捕获目标单元格每个段落的 pPr + 代表 run 的 rPr，
+# 新值按 \n 拆段逐段重放；多余段落删除、不足克隆末段格式。
+
+def _tc_paragraphs(cell):
+    """返回目标单元格的 w:p 列表（无段落则补一个空段落）。"""
+    if isinstance(cell, _Cell):
+        tc = cell._tc
+    else:
+        tc = cell
+    paras = tc.findall(qn("w:p"))
+    if not paras:
+        p = tc.makeelement(qn("w:p"), {})
+        tc.append(p)
+        paras = [p]
+    return paras
+
+def _capture_para(p):
+    """捕获段落格式：pPr（保留不动）+ run/hyperlink 的 rPr（代表格式）。
+    隐患5加固：优先取普通 run 的 rPr；只有段落全部是超链接时才取超链接 rPr。
+    （超链接样式常带下划线/蓝色，覆写降级为纯文本后不应继承超链接外观。）
+    返回 {'rPr': deepcopy 或 None}。pPr 不单独拷贝，因为段落元素本身保留。
+    """
+    hyper_rPr = None
+    for child in p.iterchildren():
+        if child.tag == qn("w:r"):
+            rp = child.find(qn("w:rPr"))
+            if rp is not None:
+                return {"rPr": copy.deepcopy(rp)}   # 首个普通 run 即返回
+        elif child.tag == qn("w:hyperlink"):
+            for r in child.findall(qn("w:r")):
+                rp = r.find(qn("w:rPr"))
+                if rp is not None and hyper_rPr is None:
+                    hyper_rPr = copy.deepcopy(rp)
+    return {"rPr": hyper_rPr}
+
+def _clear_para_content(p):
+    """清空段落内全部 run/超链接/域（保留 pPr 与段落属性）。"""
+    for child in list(p):
+        if child.tag in (qn("w:r"), qn("w:hyperlink"), qn("w:fldSimple")):
+            p.remove(child)
+
+def _replay_para(p, text, fmt):
+    """按捕获格式 fmt 重建单段文本。text 含 \n 用 <w:br/> 软换行（不产生新段落）。
+    超链接降级为纯文本（格式仍继承 rPr）；图片/域随旧内容一并清除。
+    """
+    _clear_para_content(p)
+    new_r = p.makeelement(qn("w:r"), {})
+    if fmt["rPr"] is not None:
+        new_r.append(copy.deepcopy(fmt["rPr"]))
+    lines = str(text).split("\n")
+    for i, line in enumerate(lines):
+        if i > 0:
+            br = p.makeelement(qn("w:br"), {})
+            new_r.append(br)
+        t = p.makeelement(qn("w:t"), {})
+        t.text = line
+        if line and (line[0].isspace() or line[-1].isspace()):
+            t.set(qn("xml:space"), "preserve")
+        new_r.append(t)
+    p.append(new_r)
+    return new_r
+
+def set_paragraph_text(p_elm, text, xml_space=True):
+    """单段格式捕获-重放（保留 pPr + 代表 run rPr）。"""
+    fmt = _capture_para(p_elm)
+    _replay_para(p_elm, text, fmt)
+
+def set_cell_text(cell, text):
+    """格式捕获-重放整格：捕获每个段落格式，新值按 \\n 拆段逐段重放。
+    段落数不足 → 克隆末段格式；段落数超出 → 删除多余段落（保留首个）。
+    """
+    paras = _tc_paragraphs(cell)
+    fmts = [_capture_para(p) for p in paras]
+    lines = [str(line) for line in str(text).split("\n")]
+    # 段落数不足：克隆末段（deepcopy 后清内容，保留其 pPr/rPr 载体）。
+    # 注意 anchor 必须随插入推进，否则重复 addnext(同一锚点) 会让新段落逆序。
+    if fmts and len(paras) < len(lines):
+        src_fmt = _capture_para(paras[-1])
+        anchor = paras[-1]
+        for _ in range(len(lines) - len(paras)):
+            new_p = copy.deepcopy(anchor)
+            _clear_para_content(new_p)
+            anchor.addnext(new_p)
+            anchor = new_p
+            paras.append(new_p)
+            fmts.append(src_fmt)
+    # 段落数超出：删除多余段落
+    if len(paras) > len(lines) and lines:
+        for p in paras[len(lines):]:
+            p.getparent().remove(p)
+        paras = paras[:len(lines)]
+        fmts = fmts[:len(lines)]
+    # 逐段重放
+    for p, line, fmt in zip(paras, lines, fmts):
+        _replay_para(p, line, fmt)
+
+# ------------------------- 排版空格围栏 -------------------------
+# 模板中很多字段行用“空格”做排版对齐（如 '9.2  嗅觉阈值：      ' 的多空格/尾空格）。
+# 围栏原则：覆写时优先只替换“文字/符号”，保留模板的排版空格结构。
+
+def _cell_w_text(tr, ci):
+    """取 tr 第 ci 个单元格的首段纯文本（拼合 w:t）。"""
+    tcs = tr.findall(qn("w:tc"))
+    if ci >= len(tcs):
+        return ""
+    p = tcs[ci].find(qn("w:p"))
+    if p is None:
+        return ""
+    return "".join(t.text or "" for t in p.iter(qn("w:t")))
+
+def replace_label_keep_spacing(ref_text, seq, label, keep_ref_seq=True):
+    """标签格排版护栏：保留模板的序号后空格与尾部对齐空格，只替换序号与文字。
+    结构：前导空白 | 序号 | 序号后空白 | 文字 | 标点 | 尾部空白
+    - keep_ref_seq=True（默认）：写入项给 seq 用写入项，否则沿用参考行/模板行序号
+      （子标题行如 '8.1 暴露控制' 不因写入项无 seq 而丢序号；模板 '9.1  外观：' 同理）；
+    - keep_ref_seq=False（新增行）：写入项无 seq 时**不引入**参考行序号，
+      避免新增字段误沿用相邻字段序号（如 S11 新字段全部变成 '11.10'）。
+    - 冒号跟随参考行风格（模板 '9.1  外观：' 带冒号、'8.1 暴露控制' 无冒号都保留）。
+    示例：ref='9.2  嗅觉阈值：      ', seq='9.23', label='折射率'
+        -> '9.23  折射率：      '
+    """
+    ref_text = ref_text or ""
+    m = re.match(r"^(\s*)(\d+(?:\.\d+)*)?(\s*)(.*?)(\s*)$", ref_text, re.S)
+    lead, ref_seq, seq_space, _body, tail = m.groups()
+    body = (_body or "").strip()
+    has_colon = bool(re.search(r"[：:]\s*$", body))
+    # 序号：写入项给了就用写入项；否则按 keep_ref_seq 决定是否沿用参考行
+    if keep_ref_seq:
+        new_seq = (seq or "").strip() or (ref_seq or "")
+    else:
+        new_seq = (seq or "").strip()
+    if new_seq:
+        # 有序号：继承参考行的序号后空格排版（含无空格，如 '1.1产品名称：'）
+        space = seq_space
+    else:
+        # 无序号：模板若有空格则继承（'中文名称： '），否则不加空格
+        space = seq_space or ""
+    core = f"{new_seq}{space}{label}" + ("：" if has_colon else "")
+    return f"{lead}{core}{tail}"
+
+def replace_value_keep_spacing(ref_text, new_text):
+    """值格排版护栏：保留模板前导/尾随排版空格，只替换内容本体（文字/符号）。
+    示例：ref='  无数据  ', new='7-9' -> '  7-9  '
+    """
+    ref_text = ref_text or ""
+    m = re.match(r"^(\s*)(.*?)(\s*)$", ref_text, re.S)
+    lead, _core, tail = m.groups()
+    return f"{lead}{new_text}{tail}"
+
+def cell_paragraph_xml(cell):
+    if isinstance(cell, _Cell):
+        return cell.paragraphs[0]._p
+    return cell
+
+def iter_block_items(parent):
+    if isinstance(parent, _Document):
+        parent_elm = parent.element.body
+    elif isinstance(parent, _Cell):
+        parent_elm = parent._tc
+    else:
+        raise ValueError("unknown parent")
+    for child in parent_elm.iterchildren():
+        if isinstance(child, CT_P):
+            yield Paragraph(child, parent)
+        elif isinstance(child, CT_Tbl):
+            yield Table(child, parent)
+
+def section_tables(doc):
+    """按 body 顺序识别 16 节表格：{sec_no: Table}。"""
+    result = {}
+    for block in iter_block_items(doc):
+        if not isinstance(block, Table):
+            continue
+        first = block.rows[0].cells[0].text.strip()
+        m = re.match(r"^(\d+)\.", first)
+        if m:
+            result[int(m.group(1))] = block
+    return result
+
+def section_sub_labels(template_path, sections=None):
+    """用检索工具（build_hierarchy）确认模板父子级，返回每节“二级子标题”标签集。
+    子标题行（如 S8 的 8.1 暴露控制、S3 的 3.2 成分）是模板结构骨架：
+    不参与字段删除/重建，仅当写入项含该标签时覆写其标签格。
+    返回 {sec_no: {norm_label, ...}}。
+    """
+    if read_msds is None or build_hierarchy is None:
+        return {}
+    try:
+        r = read_msds(str(template_path))
+        nodes = build_hierarchy(r)
+    except Exception as e:
+        log(f"读取模板父子级失败（跳过子标题保护）: {e}", "WARN")
+        return {}
+    result = {}
+    for node in nodes:
+        if sections is not None and node.number not in sections:
+            continue
+        subs = {norm_label(bt.title) for bt in node.big_titles
+                if bt.kind == "sub" and bt.title}
+        if subs:
+            result[node.number] = subs
+    return result
+
+# ------------------------- 物理行映射 -------------------------
+def row_kind(tr):
+    """表格行分类：
+      - 'field'：标签|值 两列结构行（首格有文本、≥2 独立 tc），可匹配/可删；
+      - 'note' ：单格整行（通栏说明/跨列子标题）或首格空 → 结构行，不参与匹配/删除。
+    """
+    tcs = tr.findall(qn("w:tc"))
+    if len(tcs) < 2:
+        return "note"
+    if not _cell_w_text(tr, 0).strip():
+        return "note"
+    return "field"
+
+def _is_label_note_row(tr):
+    """判断单格行是否为“标签形态”：有前导序号，或以冒号结尾。
+    用于区分 note 标签行（'符合下列法规要求：'）与纯值行（法规内容行），
+    纯值行可被上级标签行的值区重建删除，标签行则保留。
+    """
+    txt = _cell_w_text(tr, 0).strip()
+    if re.match(r"^\d+(?:\.\d+)*\s*[^\d\s]", txt):
+        return True
+    if re.search(r"[：:]\s*$", txt):
+        return True
+    return False
+
+def _delete_note_value_rows(tr, tbl):
+    """删除 tr 之后连续的“纯值单格行”（值区），直到遇到 field 行或标签形态行。
+    用于 S15 法规：'符合下列法规要求：' 标签行后的法规单格行是值区，
+    覆写该字段的多行值后应删除模板原法规行，避免新旧法规重复。
+    """
+    rows = tbl.rows
+    delete = []
+    started = False
+    for row in rows:
+        rtr = row._tr
+        if not started:
+            if rtr is tr:
+                started = True
+            continue
+        tcs = rtr.findall(qn("w:tc"))
+        if len(tcs) < 2 and not _is_label_note_row(rtr):
+            delete.append(rtr)
+        else:
+            break
+    if delete:
+        for r in delete:
+            r.getparent().remove(r)
+    return len(delete)
+
+def row_map(tbl):
+    """返回 {归一化标签: (row_idx, seq)}，跳过首行标题与结构行（note）。"""
+    mapping = {}
+    for ri in range(1, len(tbl.rows)):
+        if row_kind(tbl.rows[ri]._tr) == "note":
+            continue
+        seq, label = norm_field(tbl.rows[ri].cells[0].text)
+        mapping[norm_label(label)] = (ri, seq)
+    return mapping
+
+def find_component_rows(tbl):
+    """定位 S3 成分表：返回 (产品类型行idx, 表头行idx, 成分起始idx)。"""
+    prod_row = None
+    comp_header = None
+    for ri in range(1, len(tbl.rows)):
+        seq, label = norm_field(tbl.rows[ri].cells[0].text)
+        if label == "产品类型" and prod_row is None:
+            prod_row = ri
+        if label == "化学品名称" and comp_header is None:
+            comp_header = ri
+    comp_start = comp_header + 1 if comp_header is not None else None
+    return prod_row, comp_header, comp_start
+
+# ------------------------- 执行：改 -------------------------
+def _cell_text_of(cell):
+    """取单元格纯文本（兼容 _Cell 与 w:tc 元素）。"""
+    if isinstance(cell, _Cell):
+        return cell.text
+    paras = cell.findall(qn("w:p"))
+    return "\n".join("".join(t.text or "" for t in p.iter(qn("w:t"))) for p in paras)
+
+def op_update_cell(cell, value, tag, keep_spacing=True, empty_policy="warn"):
+    """覆写值格文本，格式继承。
+    keep_spacing=True 时保留模板排版空格，只替换文字/符号。
+    empty_policy: overwrite/preserve/warn（见 EMPTY_POLICY_DEFAULT）。
+    隐患4：空值按策略处理——preserve 跳过；overwrite/warn 清空且不留排版空格残留；
+    warn 在模板原值非空时记录告警（模板预填默认值被清空需可审计）。
+    返回 (旧值, 新值-不含排版空格)。"""
+    old = _cell_text_of(cell)
+    val_str = "" if value is None else str(value)
+    if not val_str.strip():
+        if empty_policy == "preserve":
+            return old, val_str
+        set_cell_text(cell, "")
+        if empty_policy == "warn" and old.strip():
+            log(f"空值覆写（模板原值被清空）: {tag} {old!r} -> ''", "WARN")
+        return old, val_str
+    new_text = replace_value_keep_spacing(old, val_str) if keep_spacing else val_str
+    set_cell_text(cell, new_text)
+    return old, val_str
+
+# ------------------------- 执行：删 -------------------------
+def op_delete_rows(trs):
+    """物理删除表格行（先移除靠后的行避免索引位移）。"""
+    for tr in trs:
+        tr.getparent().remove(tr)
+
+# ------------------------- 执行：增 -------------------------
+def find_insert_target(tbl, seq, rows_seq):
+    """在 section 表格内定位新字段行的插入目标 tr。
+    rows_seq: [(seq, tr)] 当前字段行的有序列表。
+    返回 (anchor_tr, mode) mode in {'before','after'}。
+    """
+    key = seq_key(seq)
+    if key is not None:
+        for s, tr in rows_seq:
+            sk = seq_key(s)
+            if sk is not None and sk >= key:
+                return tr, "before"
+    # 无序号或全小于：追加到最后一个字段行之后
+    if rows_seq:
+        return rows_seq[-1][1], "after"
+    return tbl.rows[0]._tr, "after"
+
+def op_insert_row(tbl, ref_tr, new_label_text, new_value_text, tag):
+    """克隆参考行 tr，替换标签/值文本，插到 ref_tr 后。返回新 tr。"""
+    new_tr = copy.deepcopy(ref_tr)
+    tcs = new_tr.findall(qn("w:tc"))
+    if not tcs:
+        raise RuntimeError(f"{tag}: 参考行无单元格，无法克隆")
+    # 标签格（第 1 个 tc）取首个段落
+    p_label = tcs[0].find(qn("w:p"))
+    if p_label is None:
+        raise RuntimeError(f"{tag}: 标签格无段落")
+    set_paragraph_text(p_label, new_label_text)
+    # 值格（第 2 个 tc，若存在）
+    if len(tcs) >= 2:
+        p_value = tcs[1].find(qn("w:p"))
+        if p_value is not None:
+            set_paragraph_text(p_value, new_value_text)
+    ref_tr.addnext(new_tr)
+    return new_tr
+
+def pick_ref_row(tbl, rows_seq, seq, ref_pick):
+    """按策略选择参考行 tr（新增行克隆其格式/排版）。
+    rows_seq: [(seq, tr)] 当前字段行有序序列。
+    ref_pick: None/'auto' | 'last' | 'label:标签' | 'row:行号'
+    返回 tr 或 None。
+    """
+    if ref_pick is None:
+        ref_pick = DEFAULT_REF_PICK
+    pick = str(ref_pick or "auto")
+    if pick.startswith("label:"):
+        target = norm_label(pick[len("label:"):].strip())
+        for _s, tr in rows_seq:
+            _seq, _label = norm_field(_cell_w_text(tr, 0))
+            if norm_label(_label) == target:
+                return tr
+        # 标签未找到：回退到最后一个
+        log(f"参考行标签 {target!r} 未找到，回退到最后一个字段行", "WARN")
+        return rows_seq[-1][1] if rows_seq else None
+    if pick.startswith("row:"):
+        try:
+            ridx = int(pick[len("row:"):].strip())
+            if 0 <= ridx < len(tbl.rows):
+                return tbl.rows[ridx]._tr
+        except ValueError:
+            pass
+        log(f"参考行行号 {pick!r} 无效，回退到最后一个字段行", "WARN")
+        return rows_seq[-1][1] if rows_seq else None
+    if pick == "last":
+        return rows_seq[-1][1] if rows_seq else None
+    # auto：与目标 seq 相邻的模板字段行
+    key = seq_key(seq)
+    if key is not None:
+        best = None
+        best_after = None
+        for _s, tr in rows_seq:
+            sk = seq_key(_s)
+            if sk is None:
+                continue
+            if sk == key:
+                return tr
+            if sk > key and (best_after is None or sk < best_after[0]):
+                best_after = (sk, tr)
+            elif sk < key and (best is None or sk > best[0]):
+                best = (sk, tr)
+        if best_after is not None:
+            return best_after[1]     # 优先取比目标大的最近一个（更接近目标）
+        if best is not None:
+            return best[1]
+    return rows_seq[-1][1] if rows_seq else None
+
+# ------------------------- 单节同步（改/删/增，以写入项为准重建） -------------------------
+def sync_section(tbl, sec_no, items, preserve_labels, ref_pick=None, order="write",
+                 struct_labels=None, keep_structure=False, empty_policy="warn"):
+    """对单个普通 section 执行改/删/增 —— 重建该节字段行为“写入项顺序”。
+    items: [{'seq','label','value'}]，顺序 = 真实文件字段顺序（写入项顺序即输出顺序）。
+    preserve_labels: 该 section 受保护标签集合（模板中有、写入项没有时保留原位）。
+    struct_labels: 模板结构行标签（子标题等，来自检索工具父子级），不参与删除/重建。
+    keep_structure: True=以模板为主（模板字段行全部保留，写入项映射到的覆写值，
+                    写入项没有的模板行保留模板原值）；False=以写入项为准（模板多出删除）。
+    order: "write"（默认）= 严格按写入项顺序重建字段行；
+           "auto" = 与 "write" 等价（旧逻辑按 seq 排序导致顺序错乱，已弃用）。
+    empty_policy: 空值覆写策略（见 op_update_cell）。
+    返回该节操作日志。
+    """
+    logs = []
+    struct_labels = struct_labels or set()
+
+    # 1) 分类收集模板行（跳过首行标题）：
+    #    - field 行：参与匹配/删除/重建
+    #    - note 行（单格通栏/首格空）：结构行，保留原位；写入项含该标签则覆写整格
+    tmpl_rows = []              # [(ri, tr, seq, nl)]
+    note_rows = []              # [(ri, tr)]
+    mapping = {}                # nl -> (tr, seq)
+    orig_idx = {}               # id(tr) -> 原行号
+    for ri in range(1, len(tbl.rows)):
+        tr = tbl.rows[ri]._tr
+        orig_idx[id(tr)] = ri
+        if row_kind(tr) == "note":
+            note_rows.append((ri, tr))
+            continue
+        seq, label = norm_field(tbl.rows[ri].cells[0].text)
+        nl = norm_label(label)
+        tmpl_rows.append((ri, tr, seq, nl))
+        if nl not in mapping:
+            mapping[nl] = (tr, seq)
+
+    # 写入项标签先映射到模板标准标签（以模板为主建通道）
+    mapped_items = []
+    for it in items:
+        m = dict(it)
+        m["label"] = map_field_label(sec_no, it["label"])
+        m["src_label"] = it["label"]           # 保留源标签（日志用）
+        mapped_items.append(m)
+
+    write_labels = {norm_label(it["label"]) for it in mapped_items}
+    keep_labels = preserve_labels | struct_labels
+    ref_seq_list = [(seq, tr) for (_ri, tr, seq, _nl) in tmpl_rows]
+    consumed = set()            # 已被结构行（note）覆写消费的 item id
+
+    # 2) 结构行（note）覆写：写入项含该标签 → 整格重放（标签格式继承），否则保留原位。
+    #    值非空时写入同格（标签\n值）；并删除该标签行后连续的值区单格行
+    #    （如 S15 法规列表：'符合下列法规要求：' 后的法规单格行）。
+    for (ri, tr) in note_rows:
+        tcs = tr.findall(qn("w:tc"))
+        if not tcs:
+            continue
+        _s, _l = norm_field(_cell_w_text(tr, 0))
+        nl = norm_label(_l)
+        if not nl:
+            continue
+        for it in mapped_items:
+            if norm_label(it["label"]) == nl:
+                label_text = replace_label_keep_spacing(_cell_w_text(tr, 0),
+                                                        it.get("seq", ""), it["label"])
+                val = it.get("value")
+                if val is not None and str(val).strip():
+                    full = label_text + "\n" + str(val)
+                    set_cell_text(tcs[0], full)
+                    _delete_note_value_rows(tr, tbl)
+                else:
+                    set_cell_text(tcs[0], label_text)
+                logs.append(("update", sec_no, ri, it["src_label"], "", it["value"]))
+                consumed.add(id(it))
+                break
+
+    # 3) 按写入项顺序构建最终行序列：
+    #    模板已有该标签 → 复用原行（格式保留）；否则 → 克隆参考行。
+    #    无论改/增，标签格都以“写入项的 seq+label（已映射为模板标准）”重建。
+    final = []                  # [(tr, is_new, it)]
+    reused_ids = set()
+    for it in mapped_items:
+        if id(it) in consumed:
+            continue
+        nl = norm_label(it["label"])
+        got = mapping.get(nl)
+        if got is not None and id(got[0]) not in reused_ids:
+            tr, _seq = got
+            reused_ids.add(id(tr))
+            is_new = False
+        else:
+            ref_tr = pick_ref_row(tbl, ref_seq_list, it.get("seq", ""), ref_pick)
+            if ref_tr is None:
+                ref_tr = tbl.rows[0]._tr
+            tr = copy.deepcopy(ref_tr)
+            is_new = True
+        # 标签序号策略（以模板为主）：
+        #  - 改行：模板原行有序号 → 用写入项 seq 或沿用模板序号；
+        #         模板原行无序号（如 S7 '安全操作防范：'）→ 不引入写入项序号（S7 修复）。
+        #  - 增行：写入项给 seq 用写入项；无 seq 不沿用参考行序号（S11 修复）。
+        it_seq = (it.get("seq") or "").strip()
+        if is_new:
+            label_seq, keep_ref = it_seq, False
+        else:
+            label_seq, keep_ref = (it_seq if _seq else ""), True
+        tcs = tr.findall(qn("w:tc"))
+        new_label_text = replace_label_keep_spacing(_cell_w_text(tr, 0),
+                                                    label_seq, it["label"],
+                                                    keep_ref_seq=keep_ref)
+        if tcs:
+            set_cell_text(tcs[0], new_label_text)
+        if len(tcs) >= 2:
+            op_update_cell(tcs[1], it["value"], f"S{sec_no}[{it['label']}]",
+                           empty_policy=empty_policy)
+        final.append((tr, is_new, it))
+
+    # 4) 孤立受保护/结构行：模板有、写入项没有 → 保留（按原行号保持原位骨架）
+    #    keep_structure=True 时，未匹配模板行也全部保留（模板为主）
+    isolated = []
+    for (ri, tr, seq, nl) in tmpl_rows:
+        if id(tr) not in reused_ids and nl not in write_labels:
+            if keep_structure or nl in keep_labels:
+                isolated.append(tr)
+
+    # 5) 删：非受保护且写入项没有（且 keep_structure=False）→ 物理删除
+    if not keep_structure:
+        delete_trs = []
+        for (ri, tr, seq, nl) in tmpl_rows:
+            if id(tr) not in reused_ids and nl not in keep_labels and nl not in write_labels:
+                delete_trs.append(tr)
+                logs.append(("delete", sec_no, ri, nl, ""))
+        op_delete_rows(delete_trs)
+
+    # 6) 计算最终排序 key：
+    #    复用行 → 原行号；新增行 → 按写入顺序插到相邻复用行之间；
+    #    孤立受保护行 → 原行号（原位骨架）。保证“写入顺序即输出顺序”。
+    key_map = {}
+    last_kept_key = 0.0
+    new_buf = []
+    for tr, is_new, it in final:
+        if is_new:
+            new_buf.append(tr)
+            continue
+        ck = float(orig_idx[id(tr)])
+        if new_buf:
+            n = len(new_buf)
+            step = (ck - last_kept_key) / (n + 1)
+            for j, ntr in enumerate(new_buf, 1):
+                key_map[id(ntr)] = last_kept_key + step * j
+            new_buf = []
+        key_map[id(tr)] = ck
+        last_kept_key = ck
+    if new_buf:                 # 写入项末尾连续为新增行
+        for j, ntr in enumerate(new_buf, 1):
+            key_map[id(ntr)] = last_kept_key + j
+    for tr in isolated:
+        key_map[id(tr)] = float(orig_idx[id(tr)])
+
+    # 7) 按 key 排序 → 物理重建字段行区（摘除后按序重插，避开原位错乱）
+    ordered = [tr for (tr, _n, _i) in final] + isolated
+    ordered.sort(key=lambda tr: key_map[id(tr)])
+    anchor = tbl.rows[0]._tr
+    prev = anchor
+    for tr in ordered:
+        parent = tr.getparent()
+        if parent is not None:
+            parent.remove(tr)
+        prev.addnext(tr)
+        prev = tr
+
+    # 8) 日志
+    for tr, is_new, it in final:
+        src = it.get("src_label", it["label"])
+        if is_new:
+            logs.append(("insert", sec_no, src, it["value"]))
+        else:
+            logs.append(("update", sec_no, -1, src, "", it["value"]))
+    # 隐患1防御：该节写入项大量靠“新增”插入（映射/通道未命中）→ 告警，提示核对映射
+    n_write = len(mapped_items)
+    n_ins = sum(1 for _t, is_new, _i in final if is_new)
+    if n_write >= 3 and n_ins > n_write * 0.5:
+        log(f"S{sec_no}: 写入项 {n_write} 个字段中 {n_ins} 个靠新增插入，"
+            f"与模板字段差异大，请核对字段映射/标准字段清单", "WARN")
+    return logs
+
+# ------------------------- S0 页眉页脚覆写 -------------------------
+def _read_s0_fields(template_path):
+    """用结构读取读模板页眉页脚字段 → {norm_label: value}，用于子串替换定位。"""
+    if read_msds is None:
+        return {}
+    try:
+        r = read_msds(str(template_path))
+        sd = r.sections.get(0)
+        if sd is None:
+            return {}
+        return {norm_label(f.label): f.value for f in sd.fields}
+    except Exception as e:
+        log(f"S0: 读取模板页眉页脚失败 {e}", "WARN")
+        return {}
+
+def sync_section0(doc, items, template_path, empty_policy="warn"):
+    """覆写页眉页脚字段（S0）—— 17 节自动化闭环的关键。
+    策略（以模板格式为准）：在 header/footer 的段落与表格单元格中，
+    用“模板字段原值”定位并替换为写入项值（子串替换，保留单元格前后缀
+    如 'P' / '修订日期：' / '-MSDS'），格式继承原 run。
+    - 页眉段落：Version
+    - 页眉表格：产品名称
+    - 页脚表格：公司名称 / 产品型号 / 修订日期
+    - 页码为域自动生成，不覆写。
+    """
+    logs = []
+    items = list(items or [])
+    if not items:
+        return logs
+    tmpl = _read_s0_fields(template_path)
+    wi = {norm_label(it["label"]): str(it.get("value", "")) for it in items}
+    touched = []
+
+    def do_replace(cell_obj, text, fld):
+        """用模板原值定位并替换字段值；返回 (新文本, 是否变更)。"""
+        old = tmpl.get(fld)
+        new = wi.get(fld)
+        if old is None or new is None:
+            return text, False
+        old_s = str(old).strip()
+        if old_s and old_s in text:
+            return text.replace(old_s, new), True
+        return text, False
+
+    for sec in doc.sections:
+        # --- 页眉 ---
+        for t in sec.header.tables:
+            for row in t.rows:
+                for c in row.cells:
+                    text, ok = do_replace(c, c.text, "产品名称")
+                    if ok:
+                        set_cell_text(c, text)
+                        touched.append(("页眉-产品名称", c.text, wi.get("产品名称", "")))
+        for p in sec.header.paragraphs:
+            if "Version" in p.text or "版本" in p.text:
+                m = re.search(r"(?:Version|版本)[：:]?\s*([Vv]?\S+)", p.text)
+                if m and "Version" in wi and m.group(1) in p.text:
+                    old_v = m.group(1)
+                    new_text = p.text.replace(old_v, wi["Version"])
+                    set_paragraph_text(p._p, new_text)
+                    touched.append(("页眉-Version", old_v, wi["Version"]))
+        # --- 页脚 ---
+        for t in sec.footer.tables:
+            for row in t.rows:
+                for c in row.cells:
+                    text = c.text
+                    for fld in ("公司名称", "产品型号", "修订日期"):
+                        new_text, ok = do_replace(c, text, fld)
+                        if ok:
+                            set_cell_text(c, new_text)
+                            touched.append((f"页脚-{fld}", text, wi.get(fld, "")))
+                            text = new_text
+    for desc, old, new in touched:
+        logs.append(("update", 0, -1, desc, old, new))
+    return logs
+
+# ------------------------- 主流程 -------------------------
+# 默认“模板结构保留”的节（以模板为主：标准 GHS/法规结构，缺字段时保留模板）
+# 可用写入项 JSON 顶层 "keep_structure": [2, ...] 或 CLI --keep-structure 覆盖。
+DEFAULT_KEEP_STRUCTURE_SECTIONS = {2}
+
+def overwrite(template_path, write_items, out_path, preserve=None, sections=None,
+              ref_pick=None, keep_structure=None, empty_policy=None, field_map=None):
+    """执行覆写：读模板 → 改/删/增 → 存盘。返回操作日志。
+    ref_pick: 参考行策略。取值见 pick_ref_row。
+      也支持在写入项 JSON 中按节覆盖：sections.<N>.ref = 'label:xxx' | 'last' | 'auto'
+    keep_structure: 保留模板结构的节集合（该节模板字段不删除，只覆写匹配项）。
+      默认含 {2}（GHS 标准结构节）；可用写入项 JSON 顶层 keep_structure 或参数覆盖。
+    empty_policy: 空值覆写策略（overwrite/preserve/warn，见 EMPTY_POLICY_DEFAULT）。
+      可用写入项 JSON 顶层 empty_policy 或参数覆盖。
+    field_map: 外部字段映射配置文件路径；None 时用同目录 field_maps.json（若存在），
+      否则用内置默认。隐患2：映射通道不锚定单个模板，模板更换只需换配置。
+    """
+    global FIELD_MAP
+    if field_map:
+        FIELD_MAP = _load_field_map(field_map)
+    preserve = preserve or {}
+    # keep_structure 优先级：参数 > 写入项 JSON 顶层 > 默认
+    if keep_structure is None:
+        keep_structure = write_items.get("keep_structure", DEFAULT_KEEP_STRUCTURE_SECTIONS)
+    keep_structure = set(keep_structure or [])
+    # empty_policy 优先级：参数 > 写入项 JSON 顶层 > 默认
+    if empty_policy is None:
+        empty_policy = write_items.get("empty_policy", EMPTY_POLICY_DEFAULT)
+    empty_policy = str(empty_policy or EMPTY_POLICY_DEFAULT).strip().lower()
+    if empty_policy not in ("overwrite", "preserve", "warn"):
+        log(f"空值策略 {empty_policy!r} 无效，回退到默认 {EMPTY_POLICY_DEFAULT}", "WARN")
+        empty_policy = EMPTY_POLICY_DEFAULT
+    log(f"模板: {template_path}")
+    doc = Document(template_path)
+    tables = section_tables(doc)
+    log(f"识别到 {len(tables)} 个 section 表格")
+
+    # 用检索工具确认模板父子级 → 每节子标题标签集（结构行，不参与删除）
+    sub_labels = section_sub_labels(template_path, sections=sections)
+
+    all_logs = []
+    sec_objs = write_items.get("sections", {})
+
+    for sec_no, payload in sec_objs.items():
+        sec_no = int(sec_no)
+        if sections is not None and sec_no not in sections:
+            continue
+        if sec_no == 0:
+            # S0 页眉页脚：不在 body 表格里，走专用路径
+            logs = sync_section0(doc, payload, template_path, empty_policy=empty_policy)
+            for lg in logs:
+                kind = lg[0]
+                if kind == "update":
+                    log(f"S{lg[1]} 改 [{lg[3]}] {lg[4]!r} -> {lg[5]!r}")
+            all_logs.extend(logs)
+            continue
+        if sec_no not in tables:
+            log(f"Section{sec_no}：模板中不存在该节，跳过", "WARN")
+            continue
+        tbl = tables[sec_no]
+        preserve_labels = set(preserve.get(sec_no, set())) | set(DEFAULT_PRESERVE.get(sec_no, set()))
+        struct_labels = sub_labels.get(sec_no, set())
+        # 参考行策略：节内 ref > 全局 ref_pick > 默认
+        sec_pick = ref_pick
+        if isinstance(payload, dict):
+            sec_pick = payload.get("ref", sec_pick)
+        elif isinstance(payload, list) and isinstance(payload, list):
+            # 若节对象为 list，不支持内嵌 ref；沿用全局
+            pass
+        # 隐患3：keep_structure 节缺“必需字段”→ 该行保留模板默认值，需告警
+        required = REQUIRED_FIELDS.get(sec_no)
+        if required and sec_no in keep_structure and isinstance(payload, list):
+            write_labels_sec = {norm_label(map_field_label(sec_no, it["label"]))
+                                for it in payload}
+            for rf in required:
+                if rf not in write_labels_sec:
+                    log(f"S{sec_no}: keep_structure 节缺必需字段 {rf}，"
+                        f"该行保留模板默认值，请核实是否应为空值", "WARN")
+        if sec_no == 3 and isinstance(payload, dict):
+            logs = sync_section3(tbl, payload, preserve_labels, ref_pick=sec_pick,
+                                 empty_policy=empty_policy)
+        elif isinstance(payload, list):
+            logs = sync_section(tbl, sec_no, payload, preserve_labels, ref_pick=sec_pick,
+                                struct_labels=struct_labels,
+                                keep_structure=sec_no in keep_structure,
+                                empty_policy=empty_policy)
+        else:
+            log(f"Section{sec_no}：未知写入项格式，跳过", "WARN")
+            continue
+        for lg in logs:
+            kind = lg[0]
+            if kind == "update":
+                log(f"S{lg[1]} 改 row{lg[2]} [{lg[3]}] {lg[4]!r} -> {lg[5]!r}")
+            elif kind == "delete":
+                log(f"S{lg[1]} 删 row{lg[2]} [{lg[3]}]")
+            elif kind == "insert":
+                log(f"S{lg[1]} 增 [{lg[2]}] = {lg[3]!r}")
+            elif kind == "insert-pending":
+                log(f"S{lg[1]} 待增（后续执行）[{lg[2]}] = {lg[3]!r}")
+        all_logs.extend(logs)
+
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    doc.save(out_path)
+    log(f"已保存: {out_path}")
+    return all_logs
+
+# ------------------------- 闭环校验（调用结构读取 read_msds 读回） -------------------------
+def verify_output(template_path, out_path, write_items, preserve=None, sections=None):
+    """覆写后用 read_msds 读回输出文档，与写入项逐字段对比。
+    sections: 若指定（如 {1,3,9}），只校验这些节；否则校验写入项中全部节。
+    返回 (ok, 问题列表)。
+    """
+    preserve = preserve or {}
+    if read_msds is None:
+        log("结构读取工具不可用，跳过闭环校验", "WARN")
+        return True, []
+    problems = []
+    out = read_msds(str(out_path))
+    sec_objs = write_items.get("sections", {})
+    for sec_no, payload in sec_objs.items():
+        sec_no = int(sec_no)
+        if sections is not None and sec_no not in sections:
+            continue
+        if sec_no not in out.sections:
+            problems.append(f"S{sec_no}: 输出文档缺失该节")
+            continue
+        sd = out.sections[sec_no]
+        if sec_no == 0:
+            # S0 页眉页脚：读回 fields 即页眉页脚字段，逐字段对比写入项
+            found = {}
+            for f in sd.fields:
+                nl = norm_label(f.label)
+                if nl:
+                    found[nl] = f.value
+            for it in payload:
+                nl = norm_label(it["label"])
+                if nl not in found:
+                    problems.append(f"S0.{it['label']}: 输出缺失该字段")
+                elif str(found[nl]).strip() != str(it.get("value", "")).strip():
+                    problems.append(f"S0.{it['label']}: 期望{it['value']!r} 实际{found[nl]!r}")
+            continue
+        if sec_no == 3 and isinstance(payload, dict):
+            # 产品类型
+            found = {}
+            for f in sd.fields:
+                _s, label = norm_field(f.label)
+                found[norm_label(label)] = f.value
+            if "产品类型" in payload:
+                exp = payload["产品类型"].strip()
+                if found.get(norm_label("产品类型"), "").strip() != exp:
+                    problems.append(f"S3.产品类型: 期望{exp!r} 实际{found.get(norm_label('产品类型'))!r}")
+            # 成分（用结构读取的归一化函数对齐语义）
+            exp_comps = payload.get("components", [])
+            got_comps = [(c.name, c.cas, c.conc) for c in sd.components]
+            for i, exp in enumerate(exp_comps):
+                if i < len(got_comps):
+                    got = got_comps[i]
+                    exp_norm = (_norm_comp(exp.get("name", ""), normalize_component_name),
+                                _norm_comp(exp.get("cas", ""), normalize_component_cas),
+                                _norm_comp(exp.get("conc", ""), normalize_component_conc))
+                    got_norm = (_norm_comp(got[0], normalize_component_name),
+                                _norm_comp(got[1], normalize_component_cas),
+                                _norm_comp(got[2], normalize_component_conc))
+                    if exp_norm != got_norm:
+                        problems.append(f"S3.成分{i}: 期望{exp} 实际{got}")
+                else:
+                    problems.append(f"S3.成分{i}: 期望{exp} 输出缺失")
+            if len(got_comps) > len(exp_comps):
+                problems.append(f"S3: 成分多出 {len(got_comps) - len(exp_comps)} 行")
+        elif isinstance(payload, list):
+            found = {}
+            for f in sd.fields:
+                _s, label = norm_field(f.label)
+                nl = norm_label(label)
+                if nl:
+                    found[nl] = f.value
+                # 数字开头的化学品名（如 '2-丁氧基乙醇'）会被 norm_field 误拆序号，
+                # 完整标签也登记，避免写入项匹配失败
+                full = norm_label(f.label)
+                if full:
+                    found.setdefault(full, f.value)
+            # 通栏/子标题行（note）读回后落在 sd.lines，也纳入匹配。
+            # 单格 '标签：\n多行值' 整条在 lines 里，取首行做标签、其余做值。
+            for ln in sd.lines:
+                ln_s = str(ln)
+                first = ln_s.split("\n")[0]
+                _s, label = norm_field(first)
+                nl = norm_label(label)
+                if nl and nl not in found:
+                    found[nl] = "\n".join(ln_s.split("\n")[1:])
+            for it in payload:
+                exp_label = norm_label(map_field_label(sec_no, it["label"]))
+                exp_val = it["value"]
+                if exp_label not in found:
+                    problems.append(f"S{sec_no}.{it['label']}: 输出缺失该字段")
+                elif found[exp_label].strip() != exp_val.strip():
+                    problems.append(f"S{sec_no}.{it['label']}: 期望{exp_val!r} 实际{found[exp_label]!r}")
+            # 保留字段应仍存在
+            preserve_labels = set(preserve.get(sec_no, set())) | set(DEFAULT_PRESERVE.get(sec_no, set()))
+            for pl in preserve_labels:
+                if norm_label(pl) not in found:
+                    problems.append(f"S{sec_no}: 保留字段缺失 {pl}")
+    if problems:
+        return False, problems
+    return True, []
+
+# ------------------------- CLI -------------------------
+def main():
+    ap = argparse.ArgumentParser(description="MSDS 覆写引擎（增删查改，以写入项为准）")
+    ap.add_argument("--template", required=True, help="模板 docx")
+    ap.add_argument("--write-items", required=True, help="写入项 JSON（推断引擎输出契约）")
+    ap.add_argument("--out", required=True, help="输出 docx 路径")
+    ap.add_argument("--sections", help="仅处理指定节，如 1,3,9")
+    ap.add_argument("--ref-pick", default=None,
+                    help="新增行参考行策略: auto(默认)/last/label:标签名/row:行号")
+    ap.add_argument("--keep-structure", default=None,
+                    help="保留模板结构的节（不删除模板字段），如 2；默认含2")
+    ap.add_argument("--empty-policy", default=None,
+                    help="空值覆写策略: warn(默认,覆写+告警)/overwrite/preserve")
+    ap.add_argument("--field-map", default=None,
+                    help="字段映射配置文件 json（默认同目录 field_maps.json）")
+    args = ap.parse_args()
+
+    write_items = json.loads(Path(args.write_items).read_text(encoding="utf-8"))
+    sections = None
+    if args.sections:
+        sections = {int(x) for x in args.sections.split(",") if x.strip()}
+    keep_structure = None
+    if args.keep_structure:
+        keep_structure = {int(x) for x in args.keep_structure.split(",") if x.strip()}
+
+    overwrite(args.template, write_items, args.out, sections=sections,
+              ref_pick=args.ref_pick, keep_structure=keep_structure,
+              empty_policy=args.empty_policy, field_map=args.field_map)
+    ok, problems = verify_output(args.template, args.out, write_items, sections=sections)
+    if ok:
+        log("闭环校验通过 OK：覆写结果与写入项一致。")
+    else:
+        log("闭环校验失败：", "FAIL")
+        for p in problems:
+            log("  - " + p, "FAIL")
+        sys.exit(1)
+
+# ------------------------- S3 同步（产品类型 + 成分增删） -------------------------
+def _clean_comp_name(name):
+    """成分名称清洗：去所有空白（中文名称里的空格/半角空格会导致换行断裂）。"""
+    return re.sub(r"\s+", "", name or "")
+
+def _tc_pPr(tc):
+    """返回单元格首个段落的 pPr（无则创建）。"""
+    p = tc.find(qn("w:p"))
+    if p is None:
+        p = tc.makeelement(qn("w:p"), {})
+        tc.append(p)
+    pPr = p.find(qn("w:pPr"))
+    if pPr is None:
+        pPr = p.makeelement(qn("w:pPr"), {})
+        p.insert(0, pPr)
+    return pPr
+
+def _format_component_name_cell(cell):
+    """成分名称列格式：去首行缩进/右缩进 + 居中（避免长名称折行断裂）。
+    覆写时只改 pPr（缩进/对齐），不破坏 rPr 格式继承。
+    """
+    if isinstance(cell, _Cell):
+        tc = cell._tc
+    else:
+        tc = cell
+    pPr = _tc_pPr(tc)
+    # 去缩进
+    ind = pPr.find(qn("w:ind"))
+    if ind is not None:
+        for attr in ("w:left", "w:right", "w:firstLine",
+                     "w:leftChars", "w:rightChars", "w:firstLineChars"):
+            ind.attrib.pop(qn(attr), None)
+        if len(ind.attrib) == 0:
+            pPr.remove(ind)
+    # 居中
+    jc = pPr.find(qn("w:jc"))
+    if jc is None:
+        jc = pPr.makeelement(qn("w:jc"), {})
+        pPr.append(jc)
+    jc.set(qn("w:val"), "center")
+
+def sync_section3(tbl, sec_data, preserve_labels, ref_pick=None, empty_policy="warn"):
+    """S3：产品类型改 + 成分行增/删。sec_data: {'产品类型':..., 'components':[...]}
+    ref_pick: 参考行策略，仅对成分行增补时使用。
+    empty_policy: 空值覆写策略（见 op_update_cell）。
+    成分名称列：覆写时去空白 + 居中格式（消空格/缩进防折行断裂）。
+    """
+    logs = []
+    prod_row, comp_header, comp_start = find_component_rows(tbl)
+    if prod_row is not None:
+        if "产品类型" in sec_data:
+            cell = tbl.rows[prod_row].cells[1]
+            old = cell.text
+            op_update_cell(cell, sec_data["产品类型"], "S3.产品类型", empty_policy=empty_policy)
+            logs.append(("update", 3, prod_row, "产品类型", old, sec_data["产品类型"]))
+    components = sec_data.get("components", [])
+    if comp_start is None:
+        log("S3 未定位到成分表头，跳过成分同步", "WARN")
+        return logs
+    n_tmpl = len(tbl.rows) - comp_start
+    n_want = len(components)
+    # 改：公共部分逐格覆写
+    for i in range(min(n_tmpl, n_want)):
+        comp = components[i]
+        row = tbl.rows[comp_start + i]
+        old_name = row.cells[0].text
+        for ci, key in ((0, "name"), (1, "cas"), (2, "conc")):
+            cell = row.cells[ci]
+            if ci == 0:
+                val = _clean_comp_name(comp.get(key, ""))
+            else:
+                val = comp.get(key, "")
+            op_update_cell(cell, val, f"S3成分[{i}].{key}", empty_policy=empty_policy)
+        _format_component_name_cell(row.cells[0])
+        new_name = row.cells[0].text
+        logs.append(("update", 3, comp_start + i, f"成分{i}", old_name, new_name))
+    # 删：模板成分行多于写入项
+    if n_tmpl > n_want:
+        delete_trs = [tbl.rows[comp_start + i]._tr for i in range(n_want, n_tmpl)]
+        op_delete_rows(delete_trs)
+        logs.append(("delete", 3, -1, f"成分行x{n_tmpl - n_want}", ""))
+    # 增：写入项成分行多于模板
+    if n_want > n_tmpl:
+        comp_rows_seq = [(None, tbl.rows[comp_start + i]._tr) for i in range(n_tmpl)]
+        if comp_rows_seq:
+            ref_tr = pick_ref_row(tbl, comp_rows_seq, None, ref_pick)
+        else:
+            ref_tr = tbl.rows[comp_header]._tr
+        for i in range(n_tmpl, n_want):
+            comp = components[i]
+            new_tr = copy.deepcopy(ref_tr)
+            tcs = new_tr.findall(qn("w:tc"))
+            for ci, key in ((0, "name"), (1, "cas"), (2, "conc")):
+                if ci < len(tcs):
+                    val = _clean_comp_name(comp.get(key, "")) if ci == 0 else comp.get(key, "")
+                    ref_text = _cell_w_text(new_tr, ci)
+                    set_cell_text(tcs[ci], replace_value_keep_spacing(ref_text, val))
+            # 新增行名称列也居中
+            if tcs:
+                _format_component_name_cell(tcs[0])
+            ref_tr.addnext(new_tr)
+            ref_tr = new_tr
+            logs.append(("insert", 3, f"成分{i}", comp.get("name", "")))
+    return logs
+
+if __name__ == "__main__":
+    main()
+

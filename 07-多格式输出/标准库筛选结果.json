@@ -1,0 +1,214 @@
+{
+  "统计": {
+    "文件总数": 766,
+    "非MSDS(排除)": 122,
+    "完美合格(可入标准库)": 6,
+    "警告(软缺超模板)": 14,
+    "不合格(fail)": 624,
+    "读取失败": 0
+  },
+  "完美合格清单": [
+    {
+      "file": "PU-2304 msds_CN 冠志.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-2304 msds_CN 冠志.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 8,
+      "vetoes": 0,
+      "perfect": true
+    },
+    {
+      "file": "PU-2306 msds_CN 冠志.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-2306 msds_CN 冠志.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 8,
+      "vetoes": 0,
+      "perfect": true
+    },
+    {
+      "file": "PU-7205 msds_CN 冠志.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-7205 msds_CN 冠志.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 8,
+      "vetoes": 0,
+      "perfect": true
+    },
+    {
+      "file": "PU-7206 msds_CN 冠志.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-7206 msds_CN 冠志.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 8,
+      "vetoes": 0,
+      "perfect": true
+    },
+    {
+      "file": "PU-7206 msds_CN 国彩.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-7206 msds_CN 国彩.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 8,
+      "vetoes": 0,
+      "perfect": true
+    },
+    {
+      "file": "PUA-7216 msds_CN 冠志.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\3 水性聚氨酯改性丙烯酸树脂 PUA\\PUA-7216 msds_CN 冠志.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 8,
+      "vetoes": 0,
+      "perfect": true
+    }
+  ],
+  "警告清单": [
+    {
+      "file": "PU-1007 msds_CN 冠志.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-1007 msds_CN 冠志.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 10,
+      "vetoes": 0,
+      "perfect": false
+    },
+    {
+      "file": "PU-1034 msds_CN 冠志.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-1034 msds_CN 冠志.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 10,
+      "vetoes": 0,
+      "perfect": false
+    },
+    {
+      "file": "PU-1034 msds_CN 国彩.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-1034 msds_CN 国彩.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 10,
+      "vetoes": 0,
+      "perfect": false
+    },
+    {
+      "file": "PU-2835P msds_CN 冠志.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-2835P\\PU-2835P\\PU-2835P msds_CN 冠志.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 10,
+      "vetoes": 0,
+      "perfect": false
+    },
+    {
+      "file": "PU-2835P msds_CN 国彩.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-2835P\\PU-2835P\\PU-2835P msds_CN 国彩.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 10,
+      "vetoes": 0,
+      "perfect": false
+    },
+    {
+      "file": "PU-3210 msds_CN 冠志.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-3210 msds_CN 冠志.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 10,
+      "vetoes": 0,
+      "perfect": false
+    },
+    {
+      "file": "PU-3210 msds_CN 国彩.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-3210 msds_CN 国彩.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 10,
+      "vetoes": 0,
+      "perfect": false
+    },
+    {
+      "file": "PU-3210A msds_CN 冠志.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-3210A msds_CN 冠志.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 10,
+      "vetoes": 0,
+      "perfect": false
+    },
+    {
+      "file": "PU-3210A msds_CN 国彩.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-3210A msds_CN 国彩.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 10,
+      "vetoes": 0,
+      "perfect": false
+    },
+    {
+      "file": "PU-3260 msds_CN 冠志.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-3260 msds_CN 冠志.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 10,
+      "vetoes": 0,
+      "perfect": false
+    },
+    {
+      "file": "PU-3260 msds_CN 国彩.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\PU-3260 msds_CN 国彩.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 10,
+      "vetoes": 0,
+      "perfect": false
+    },
+    {
+      "file": "RU-13000 msds_CN 国彩.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\1-1 单组份水性聚氨酯树脂 PU\\RU-13000 msds_CN 国彩.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 10,
+      "vetoes": 0,
+      "perfect": false
+    },
+    {
+      "file": "PU-3210 msds_CN 冠志(2).docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\给国外客户的MSDS(PU-3210 HPU-7711A)\\PU-3210 MSDS\\PU-3210 msds_CN 冠志(2).docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 10,
+      "vetoes": 0,
+      "perfect": false
+    },
+    {
+      "file": "PU-3210 msds_CN 国彩.docx",
+      "path": "F:\\冠志工作空间\\产品\\TDS MSDS\\TDS MSDS\\产品 TDS MSDS -- WORD版本 - 副本\\给国外客户的MSDS(PU-3210 HPU-7711A)\\PU-3210 MSDS\\PU-3210 msds_CN 国彩.docx",
+      "level": "warn",
+      "missing": [],
+      "hard": 0,
+      "soft": 10,
+      "vetoes": 0,
+      "perfect": false
+    }
+  ]
+}

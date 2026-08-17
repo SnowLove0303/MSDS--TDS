@@ -1,0 +1,11 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# SQLite 临时
+*.db-journal
+
+# 系统
+Thumbs.db
+Desktop.ini

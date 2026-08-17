@@ -1,0 +1,21 @@
+{
+ "危化品登记": [],
+ "生产许可": [],
+ "经营许可": [],
+ "工作场所": [
+  "https://ggfw.rlsbj.cq.gov.cn/xcb/zgbtxt/zpw_front/",
+  "http://job.mohrss.gov.cn/"
+ ],
+ "易制毒": [],
+ "监控化学品": [],
+ "重点监管": [],
+ "监控名录": [],
+ "职业病危害": [
+  "https://chinajob.mohrss.gov.cn/c/2022-07-14/356103.shtml",
+  "https://www.mohrss.gov.cn/xxgk2020/fdzdgknr/jcgk/zqyj/202207/t20220712_457477.html"
+ ],
+ "安全生产法": [
+  "https://www.mem.gov.cn/",
+  "https://www.mem.gov.cn/fw/flfgbz/fg/202107/t20210716_416558.shtml"
+ ]
+}

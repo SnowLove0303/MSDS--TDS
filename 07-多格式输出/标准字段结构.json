@@ -1,0 +1,1404 @@
+{
+  "source": "F:\\正式项目与模块化内容\\冠志\\MSDS\\Word 覆写模块\\数据库\\正式库\\标准字段数据库Excel\\Excel.xlsx",
+  "version": "1.0",
+  "generated_at": "2026-08-15 18:18:13",
+  "sections": [
+    {
+      "number": 0,
+      "title": "Section0 页眉页脚",
+      "groups": [
+        {
+          "parent": "0.1 页眉",
+          "anchor": true,
+          "note": false,
+          "fields": [
+            "Version",
+            "产品名称"
+          ]
+        },
+        {
+          "parent": "0.2 页脚",
+          "anchor": true,
+          "note": false,
+          "fields": [
+            "公司名称",
+            "产品型号",
+            "修订日期"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 1,
+      "title": "Section1 物料及供应商标识",
+      "groups": [
+        {
+          "parent": "1.1 产品名称",
+          "anchor": true,
+          "note": false,
+          "fields": [
+            "中文名称",
+            "化学品分类"
+          ]
+        },
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "产品使用建议和使用限制"
+          ]
+        },
+        {
+          "parent": "1.3 供应商信息",
+          "anchor": true,
+          "note": false,
+          "fields": [
+            "供应商名称",
+            "供应商地址",
+            "电话",
+            "传真",
+            "应急电话",
+            "电子邮件"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Section2 危险性概述",
+      "groups": [
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "紧急情况概述",
+            "GHS危险性类别"
+          ]
+        },
+        {
+          "parent": "2.3 GHS标签要素",
+          "anchor": true,
+          "note": false,
+          "fields": [
+            "GHS象形图",
+            "信号词",
+            "标签有害成分",
+            "危险性说明",
+            "防范说明"
+          ]
+        },
+        {
+          "parent": "2.6 其他危险",
+          "anchor": true,
+          "note": false,
+          "fields": [
+            "物理和化学危险",
+            "健康危害",
+            "环境危害",
+            "其他危害"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Section3 成分/组成资料",
+      "groups": [
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "产品类型"
+          ]
+        },
+        {
+          "parent": "3.2 成分",
+          "anchor": true,
+          "note": false,
+          "fields": [
+            "化学品名称（1）",
+            "CAS编号（1）",
+            "含量%（w/w）（1）",
+            "化学品名称（2）",
+            "CAS编号（2）",
+            "含量%（w/w）（2）",
+            "化学品名称（3）",
+            "CAS编号（3）",
+            "含量%（w/w）（3）",
+            "化学品名称（4）",
+            "CAS编号（4）",
+            "含量%（w/w）（4）",
+            "化学品名称（5）",
+            "CAS编号（5）",
+            "含量%（w/w）（5）"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Section4 急救措施",
+      "groups": [
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "一般措施",
+            "误服",
+            "接触眼睛",
+            "接触皮肤",
+            "吸入"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Section5 消防措施",
+      "groups": [
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "合适的灭火剂",
+            "不合适的灭火剂",
+            "物质或混合物的特殊危害",
+            "消防预防措施和保护设备"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "title": "Section6 意外泄漏措施",
+      "groups": [
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "个人预防措施、应急程序",
+            "环境保护措施",
+            "污染物收集和清除的方法"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "title": "Section7 操作和储存",
+      "groups": [
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "安全操作防范",
+            "安全储存条件"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "title": "Section8 接触控制/个人防护",
+      "groups": [
+        {
+          "parent": "8.1 暴露控制",
+          "anchor": true,
+          "note": false,
+          "fields": [
+            "呼吸系统防护",
+            "手部防护",
+            "防护手套的合适材料",
+            "氟化橡胶 –FKM",
+            "丁基橡胶 –IIR",
+            "丁腈橡胶 – NBR",
+            "建议",
+            "眼睛防护",
+            "身体防护"
+          ]
+        },
+        {
+          "parent": "8.2 生物限值",
+          "anchor": true,
+          "note": false,
+          "fields": [
+            "组分名称",
+            "标准来源",
+            "生物监测指标",
+            "生物限值",
+            "采样时间"
+          ]
+        },
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "工程控制"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "title": "Section9 物理和化学特性",
+      "groups": [
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "外观",
+            "嗅觉阈值",
+            "pH值",
+            "离子性",
+            "熔点/凝固点",
+            "初沸点",
+            "闪点",
+            "蒸发速率",
+            "可燃性",
+            "燃烧值",
+            "饱和蒸气压",
+            "相对蒸气密度",
+            "密度",
+            "水溶性",
+            "表面张力",
+            "辛醇/水分配系数对数值",
+            "自燃温度",
+            "引燃温度",
+            "分解温度",
+            "动力粘度",
+            "爆炸特性",
+            "粉尘爆炸级别",
+            "固体含量",
+            "其他信息",
+            "粘度/25℃",
+            "相对密度",
+            "pH值（5%水溶液）",
+            "有效成分",
+            "pH值（1%水溶液）",
+            "pH值（10%水溶液）",
+            "百分比挥发性",
+            "着火点",
+            "酸值",
+            "碘值",
+            "分子量",
+            "蒸发速度（醋酸丁酯-1）",
+            "蒸汽压（20℃，Kpa）",
+            "最低初沸点（℃）",
+            "含量",
+            "表面张力（10%水溶液）",
+            "pH值（（1:10稀释在水中））"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "title": "Section10 稳定性和反应性",
+      "groups": [
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "化学稳定性",
+            "危险分解产物",
+            "可能的危害反应",
+            "应避免的条件",
+            "禁配物"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "title": "Section11 毒性资料",
+      "groups": [
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "急性毒性",
+            "主要皮肤刺激性",
+            "主要眼睛刺激性",
+            "致敏性",
+            "致突变性",
+            "致癌性",
+            "生殖毒性",
+            "特异性靶器官系统毒性",
+            "吸入危险",
+            "附加信息"
+          ]
+        },
+        {
+          "parent": "通栏说明",
+          "anchor": false,
+          "note": true,
+          "fields": [
+            "通栏说明",
+            "说明1",
+            "说明2"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 12,
+      "title": "Section12 生态信息",
+      "groups": [
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "生态毒性",
+            "持久性和降解性",
+            "其他不利的影响"
+          ]
+        },
+        {
+          "parent": "通栏说明",
+          "anchor": false,
+          "note": true,
+          "fields": [
+            "通栏说明",
+            "说明1",
+            "说明2"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 13,
+      "title": "Section13 处理注意事项",
+      "groups": [
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "处理方法"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 14,
+      "title": "Section14 运输信息",
+      "groups": [
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "公路和铁路运输",
+            "海上运输",
+            "空运",
+            "用户特殊注意事项"
+          ]
+        },
+        {
+          "parent": "通栏说明",
+          "anchor": false,
+          "note": true,
+          "fields": [
+            "通栏说明",
+            "说明1",
+            "说明2",
+            "说明3"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 15,
+      "title": "Section15 法规信息",
+      "groups": [
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "条例、规范与法律",
+            "符合下列法规要求"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 16,
+      "title": "Section16 其他信息",
+      "groups": [
+        {
+          "parent": "(节下)",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "其他信息"
+          ]
+        },
+        {
+          "parent": "生态毒性",
+          "anchor": false,
+          "note": false,
+          "fields": [
+            "生态毒性(2)"
+          ]
+        }
+      ]
+    }
+  ],
+  "columns": [
+    {
+      "sec": 0,
+      "parent": "0.1 页眉",
+      "label": "页眉",
+      "type": "anchor"
+    },
+    {
+      "sec": 0,
+      "parent": "0.1 页眉",
+      "label": "Version",
+      "type": "field"
+    },
+    {
+      "sec": 0,
+      "parent": "0.1 页眉",
+      "label": "产品名称",
+      "type": "field"
+    },
+    {
+      "sec": 0,
+      "parent": "0.2 页脚",
+      "label": "页脚",
+      "type": "anchor"
+    },
+    {
+      "sec": 0,
+      "parent": "0.2 页脚",
+      "label": "公司名称",
+      "type": "field"
+    },
+    {
+      "sec": 0,
+      "parent": "0.2 页脚",
+      "label": "产品型号",
+      "type": "field"
+    },
+    {
+      "sec": 0,
+      "parent": "0.2 页脚",
+      "label": "修订日期",
+      "type": "field"
+    },
+    {
+      "sec": 1,
+      "parent": "1.1 产品名称",
+      "label": "产品名称",
+      "type": "anchor"
+    },
+    {
+      "sec": 1,
+      "parent": "1.1 产品名称",
+      "label": "中文名称",
+      "type": "field"
+    },
+    {
+      "sec": 1,
+      "parent": "1.1 产品名称",
+      "label": "化学品分类",
+      "type": "field"
+    },
+    {
+      "sec": 1,
+      "parent": "",
+      "label": "产品使用建议和使用限制",
+      "type": "field"
+    },
+    {
+      "sec": 1,
+      "parent": "1.3 供应商信息",
+      "label": "供应商信息",
+      "type": "anchor"
+    },
+    {
+      "sec": 1,
+      "parent": "1.3 供应商信息",
+      "label": "供应商名称",
+      "type": "field"
+    },
+    {
+      "sec": 1,
+      "parent": "1.3 供应商信息",
+      "label": "供应商地址",
+      "type": "field"
+    },
+    {
+      "sec": 1,
+      "parent": "1.3 供应商信息",
+      "label": "电话",
+      "type": "field"
+    },
+    {
+      "sec": 1,
+      "parent": "1.3 供应商信息",
+      "label": "传真",
+      "type": "field"
+    },
+    {
+      "sec": 1,
+      "parent": "1.3 供应商信息",
+      "label": "应急电话",
+      "type": "field"
+    },
+    {
+      "sec": 1,
+      "parent": "1.3 供应商信息",
+      "label": "电子邮件",
+      "type": "field"
+    },
+    {
+      "sec": 2,
+      "parent": "",
+      "label": "紧急情况概述",
+      "type": "field"
+    },
+    {
+      "sec": 2,
+      "parent": "",
+      "label": "GHS危险性类别",
+      "type": "field"
+    },
+    {
+      "sec": 2,
+      "parent": "2.3 GHS标签要素",
+      "label": "GHS标签要素",
+      "type": "anchor"
+    },
+    {
+      "sec": 2,
+      "parent": "2.3 GHS标签要素",
+      "label": "GHS象形图",
+      "type": "field"
+    },
+    {
+      "sec": 2,
+      "parent": "2.3 GHS标签要素",
+      "label": "信号词",
+      "type": "field"
+    },
+    {
+      "sec": 2,
+      "parent": "2.3 GHS标签要素",
+      "label": "标签有害成分",
+      "type": "field"
+    },
+    {
+      "sec": 2,
+      "parent": "2.3 GHS标签要素",
+      "label": "危险性说明",
+      "type": "field"
+    },
+    {
+      "sec": 2,
+      "parent": "2.3 GHS标签要素",
+      "label": "防范说明",
+      "type": "field"
+    },
+    {
+      "sec": 2,
+      "parent": "2.6 其他危险",
+      "label": "其他危险",
+      "type": "anchor"
+    },
+    {
+      "sec": 2,
+      "parent": "2.6 其他危险",
+      "label": "物理和化学危险",
+      "type": "field"
+    },
+    {
+      "sec": 2,
+      "parent": "2.6 其他危险",
+      "label": "健康危害",
+      "type": "field"
+    },
+    {
+      "sec": 2,
+      "parent": "2.6 其他危险",
+      "label": "环境危害",
+      "type": "field"
+    },
+    {
+      "sec": 2,
+      "parent": "2.6 其他危险",
+      "label": "其他危害",
+      "type": "field"
+    },
+    {
+      "sec": 3,
+      "parent": "",
+      "label": "产品类型",
+      "type": "field"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "成分",
+      "type": "anchor"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "化学品名称（1）",
+      "type": "comp"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "CAS编号（1）",
+      "type": "comp"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "含量%（w/w）（1）",
+      "type": "comp"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "化学品名称（2）",
+      "type": "comp"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "CAS编号（2）",
+      "type": "comp"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "含量%（w/w）（2）",
+      "type": "comp"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "化学品名称（3）",
+      "type": "comp"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "CAS编号（3）",
+      "type": "comp"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "含量%（w/w）（3）",
+      "type": "comp"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "化学品名称（4）",
+      "type": "comp"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "CAS编号（4）",
+      "type": "comp"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "含量%（w/w）（4）",
+      "type": "comp"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "化学品名称（5）",
+      "type": "comp"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "CAS编号（5）",
+      "type": "comp"
+    },
+    {
+      "sec": 3,
+      "parent": "3.2 成分",
+      "label": "含量%（w/w）（5）",
+      "type": "comp"
+    },
+    {
+      "sec": 4,
+      "parent": "",
+      "label": "一般措施",
+      "type": "field"
+    },
+    {
+      "sec": 4,
+      "parent": "",
+      "label": "误服",
+      "type": "field"
+    },
+    {
+      "sec": 4,
+      "parent": "",
+      "label": "接触眼睛",
+      "type": "field"
+    },
+    {
+      "sec": 4,
+      "parent": "",
+      "label": "接触皮肤",
+      "type": "field"
+    },
+    {
+      "sec": 4,
+      "parent": "",
+      "label": "吸入",
+      "type": "field"
+    },
+    {
+      "sec": 5,
+      "parent": "",
+      "label": "合适的灭火剂",
+      "type": "field"
+    },
+    {
+      "sec": 5,
+      "parent": "",
+      "label": "不合适的灭火剂",
+      "type": "field"
+    },
+    {
+      "sec": 5,
+      "parent": "",
+      "label": "物质或混合物的特殊危害",
+      "type": "field"
+    },
+    {
+      "sec": 5,
+      "parent": "",
+      "label": "消防预防措施和保护设备",
+      "type": "field"
+    },
+    {
+      "sec": 6,
+      "parent": "",
+      "label": "个人预防措施、应急程序",
+      "type": "field"
+    },
+    {
+      "sec": 6,
+      "parent": "",
+      "label": "环境保护措施",
+      "type": "field"
+    },
+    {
+      "sec": 6,
+      "parent": "",
+      "label": "污染物收集和清除的方法",
+      "type": "field"
+    },
+    {
+      "sec": 7,
+      "parent": "",
+      "label": "安全操作防范",
+      "type": "field"
+    },
+    {
+      "sec": 7,
+      "parent": "",
+      "label": "安全储存条件",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "8.1 暴露控制",
+      "label": "暴露控制",
+      "type": "anchor"
+    },
+    {
+      "sec": 8,
+      "parent": "8.1 暴露控制",
+      "label": "呼吸系统防护",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "8.1 暴露控制",
+      "label": "手部防护",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "8.1 暴露控制",
+      "label": "防护手套的合适材料",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "8.1 暴露控制",
+      "label": "氟化橡胶 –FKM",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "8.1 暴露控制",
+      "label": "丁基橡胶 –IIR",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "8.1 暴露控制",
+      "label": "丁腈橡胶 – NBR",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "8.1 暴露控制",
+      "label": "建议",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "8.1 暴露控制",
+      "label": "眼睛防护",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "8.1 暴露控制",
+      "label": "身体防护",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "8.2 生物限值",
+      "label": "生物限值",
+      "type": "anchor"
+    },
+    {
+      "sec": 8,
+      "parent": "8.2 生物限值",
+      "label": "组分名称",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "8.2 生物限值",
+      "label": "标准来源",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "8.2 生物限值",
+      "label": "生物监测指标",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "8.2 生物限值",
+      "label": "生物限值",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "8.2 生物限值",
+      "label": "采样时间",
+      "type": "field"
+    },
+    {
+      "sec": 8,
+      "parent": "",
+      "label": "工程控制",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "外观",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "嗅觉阈值",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "pH值",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "离子性",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "熔点/凝固点",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "初沸点",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "闪点",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "蒸发速率",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "可燃性",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "燃烧值",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "饱和蒸气压",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "相对蒸气密度",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "密度",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "水溶性",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "表面张力",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "辛醇/水分配系数对数值",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "自燃温度",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "引燃温度",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "分解温度",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "动力粘度",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "爆炸特性",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "粉尘爆炸级别",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "固体含量",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "其他信息",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "粘度/25℃",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "相对密度",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "pH值（5%水溶液）",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "有效成分",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "pH值（1%水溶液）",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "pH值（10%水溶液）",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "百分比挥发性",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "着火点",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "酸值",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "碘值",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "分子量",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "蒸发速度（醋酸丁酯-1）",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "蒸汽压（20℃，Kpa）",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "最低初沸点（℃）",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "含量",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "表面张力（10%水溶液）",
+      "type": "field"
+    },
+    {
+      "sec": 9,
+      "parent": "",
+      "label": "pH值（（1:10稀释在水中））",
+      "type": "field"
+    },
+    {
+      "sec": 10,
+      "parent": "",
+      "label": "化学稳定性",
+      "type": "field"
+    },
+    {
+      "sec": 10,
+      "parent": "",
+      "label": "危险分解产物",
+      "type": "field"
+    },
+    {
+      "sec": 10,
+      "parent": "",
+      "label": "可能的危害反应",
+      "type": "field"
+    },
+    {
+      "sec": 10,
+      "parent": "",
+      "label": "应避免的条件",
+      "type": "field"
+    },
+    {
+      "sec": 10,
+      "parent": "",
+      "label": "禁配物",
+      "type": "field"
+    },
+    {
+      "sec": 11,
+      "parent": "",
+      "label": "急性毒性",
+      "type": "field"
+    },
+    {
+      "sec": 11,
+      "parent": "",
+      "label": "主要皮肤刺激性",
+      "type": "field"
+    },
+    {
+      "sec": 11,
+      "parent": "",
+      "label": "主要眼睛刺激性",
+      "type": "field"
+    },
+    {
+      "sec": 11,
+      "parent": "",
+      "label": "致敏性",
+      "type": "field"
+    },
+    {
+      "sec": 11,
+      "parent": "",
+      "label": "致突变性",
+      "type": "field"
+    },
+    {
+      "sec": 11,
+      "parent": "",
+      "label": "致癌性",
+      "type": "field"
+    },
+    {
+      "sec": 11,
+      "parent": "",
+      "label": "生殖毒性",
+      "type": "field"
+    },
+    {
+      "sec": 11,
+      "parent": "",
+      "label": "特异性靶器官系统毒性",
+      "type": "field"
+    },
+    {
+      "sec": 11,
+      "parent": "",
+      "label": "吸入危险",
+      "type": "field"
+    },
+    {
+      "sec": 11,
+      "parent": "",
+      "label": "附加信息",
+      "type": "field"
+    },
+    {
+      "sec": 11,
+      "parent": "通栏说明",
+      "label": "通栏说明",
+      "type": "note"
+    },
+    {
+      "sec": 11,
+      "parent": "通栏说明",
+      "label": "说明1",
+      "type": "note"
+    },
+    {
+      "sec": 11,
+      "parent": "通栏说明",
+      "label": "说明2",
+      "type": "note"
+    },
+    {
+      "sec": 12,
+      "parent": "",
+      "label": "生态毒性",
+      "type": "field"
+    },
+    {
+      "sec": 12,
+      "parent": "",
+      "label": "持久性和降解性",
+      "type": "field"
+    },
+    {
+      "sec": 12,
+      "parent": "",
+      "label": "其他不利的影响",
+      "type": "field"
+    },
+    {
+      "sec": 12,
+      "parent": "通栏说明",
+      "label": "通栏说明",
+      "type": "note"
+    },
+    {
+      "sec": 12,
+      "parent": "通栏说明",
+      "label": "说明1",
+      "type": "note"
+    },
+    {
+      "sec": 12,
+      "parent": "通栏说明",
+      "label": "说明2",
+      "type": "note"
+    },
+    {
+      "sec": 13,
+      "parent": "",
+      "label": "处理方法",
+      "type": "field"
+    },
+    {
+      "sec": 14,
+      "parent": "",
+      "label": "公路和铁路运输",
+      "type": "field"
+    },
+    {
+      "sec": 14,
+      "parent": "",
+      "label": "海上运输",
+      "type": "field"
+    },
+    {
+      "sec": 14,
+      "parent": "",
+      "label": "空运",
+      "type": "field"
+    },
+    {
+      "sec": 14,
+      "parent": "",
+      "label": "用户特殊注意事项",
+      "type": "field"
+    },
+    {
+      "sec": 14,
+      "parent": "通栏说明",
+      "label": "通栏说明",
+      "type": "note"
+    },
+    {
+      "sec": 14,
+      "parent": "通栏说明",
+      "label": "说明1",
+      "type": "note"
+    },
+    {
+      "sec": 14,
+      "parent": "通栏说明",
+      "label": "说明2",
+      "type": "note"
+    },
+    {
+      "sec": 14,
+      "parent": "通栏说明",
+      "label": "说明3",
+      "type": "note"
+    },
+    {
+      "sec": 15,
+      "parent": "",
+      "label": "条例、规范与法律",
+      "type": "field"
+    },
+    {
+      "sec": 15,
+      "parent": "",
+      "label": "符合下列法规要求",
+      "type": "field"
+    },
+    {
+      "sec": 16,
+      "parent": "",
+      "label": "其他信息",
+      "type": "field"
+    },
+    {
+      "sec": 16,
+      "parent": "生态毒性",
+      "label": "生态毒性(2)",
+      "type": "field"
+    }
+  ]
+}

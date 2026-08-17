@@ -1,0 +1,1177 @@
+[
+  {
+    "section": 0,
+    "title": "0.页眉页脚",
+    "big_titles": [
+      {
+        "seq": "0.1",
+        "title": "页眉",
+        "value": "",
+        "kind": "sub",
+        "editable": false,
+        "children": [
+          {
+            "label": "物料安全数据表",
+            "value": "",
+            "kind": "field",
+            "editable": false
+          },
+          {
+            "label": "Version",
+            "value": "1.0",
+            "kind": "field",
+            "editable": false
+          },
+          {
+            "label": "产品名称",
+            "value": "EC-1801",
+            "kind": "field",
+            "editable": true
+          }
+        ]
+      },
+      {
+        "seq": "0.2",
+        "title": "页脚",
+        "value": "",
+        "kind": "sub",
+        "editable": false,
+        "children": [
+          {
+            "label": "公司名称",
+            "value": "广州冠志新材料科技有限公司",
+            "kind": "field",
+            "editable": false
+          },
+          {
+            "label": "产品型号",
+            "value": "EC-1801",
+            "kind": "field",
+            "editable": false
+          },
+          {
+            "label": "修订日期",
+            "value": "2025/6/18",
+            "kind": "field",
+            "editable": false
+          },
+          {
+            "label": "页码",
+            "value": "5 / 5",
+            "kind": "field",
+            "editable": false
+          }
+        ]
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 1,
+    "title": "v1.物料及供应商标识",
+    "big_titles": [
+      {
+        "seq": "1.1",
+        "title": "产品名称",
+        "value": "EC-1801",
+        "kind": "field",
+        "editable": true,
+        "children": [
+          {
+            "label": "中文名称",
+            "value": "水性环氧固化剂",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "化学品分类",
+            "value": "改性聚酰胺",
+            "kind": "field",
+            "editable": true
+          }
+        ]
+      },
+      {
+        "seq": "1.2",
+        "title": "产品使用建议和使用限制",
+        "value": "涂料",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "1.3",
+        "title": "供应商信息",
+        "value": "",
+        "kind": "field",
+        "editable": true,
+        "children": [
+          {
+            "label": "供应商名称",
+            "value": "广州冠志新材料科技有限公司",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "供应商地址",
+            "value": "广州市萝岗区科学城掬泉路3号广州国际企业孵化器A区1106室",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "电话",
+            "value": "86-20-82567990",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "传真",
+            "value": "86-20-32214789",
+            "kind": "field",
+            "editable": true
+          }
+        ]
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 2,
+    "title": "2.危险性概述",
+    "big_titles": [
+      {
+        "seq": "",
+        "title": "标签要素",
+        "value": "",
+        "kind": "sub",
+        "editable": false,
+        "children": [
+          {
+            "label": "象形图",
+            "value": "[象形图]",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "警示词",
+            "value": "危险",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "危险性说明",
+            "value": "吞咽有害。\n造成严重皮肤灼伤和眼损伤。\n造成严重眼损伤。\n可能造成皮肤过敏反应。\n长期或重复接触可能对器官造成伤害。\n对水生生物有害。\n对水生生物有害并具有长期持续影响。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "防范说明",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "预防措施",
+            "value": "不要吸入粉尘/烟/气体/蒸气/喷雾。 作业后彻底清洗脸部、手和任何暴露的皮肤。 使用本产品时不得进食、饮水或吸烟。 受沾染的工作服不得带出工作场地。 避免释放到环境中。 戴防护手套/ 穿防护服/ 戴防护眼罩/ 戴防护面具。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "事故响应",
+            "value": ": 如误吞咽：漱口。不得诱导呕吐。 如感觉不适，呼叫急救中心/医生。 如果触及皮肤（或头发）：立即脱掉所有被污染的衣服。用水冲洗皮肤/淋浴。 沾染的衣服清洗后方可重新使用。 如发生皮肤刺激或皮疹：求医/就诊。 具体治疗（见本标签上的事故响应措施）。 如果吸入：将人员转移到空气新鲜处，并保持呼吸舒畅。 立即呼叫急救中心/医生。 如进",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "入眼睛",
+            "value": "用水小心冲洗几分钟。如戴隐形眼镜并可方便地取出，取出隐形眼镜。继续冲洗。 如感觉不适，须求医/就诊。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "安全储存",
+            "value": "存放处须加锁。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "废弃处置",
+            "value": ": 按照地方、区域、国家、国际规章处置内装物/容器。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "物理和化学危险",
+            "value": "无物理和化学危害。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "健康危害",
+            "value": "造成严重皮肤灼伤和眼损伤。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "可能造成皮肤过敏反应。 造成严重眼损伤。 吞咽有害。 长期或重复接触可能对器官造成伤害。 可能的接触途径",
+            "value": "眼睛、皮肤、吸入、吞咽",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "环境危害",
+            "value": "对水生生物有害。, 对水生生物有害并具有长期持续影响。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "没有分类的其他危害",
+            "value": "无",
+            "kind": "field",
+            "editable": true
+          }
+        ]
+      }
+    ],
+    "fields": [
+      {
+        "label": "GHS 危险性类别",
+        "value": "",
+        "kind": "field",
+        "editable": true
+      },
+      {
+        "label": "健康危害",
+        "value": "",
+        "kind": "field",
+        "editable": true
+      },
+      {
+        "label": "急性毒性 (经口) 类别 4",
+        "value": "",
+        "kind": "field",
+        "editable": true
+      },
+      {
+        "label": "皮肤腐蚀/刺激 类别 1B",
+        "value": "",
+        "kind": "field",
+        "editable": true
+      },
+      {
+        "label": "重眼损伤/眼刺激 类别 1",
+        "value": "",
+        "kind": "field",
+        "editable": true
+      },
+      {
+        "label": "皮肤致敏物 类别 1",
+        "value": "特异性靶器官毒性-反复接触 类别 2",
+        "kind": "field",
+        "editable": true
+      },
+      {
+        "label": "环境危害",
+        "value": "",
+        "kind": "field",
+        "editable": true
+      },
+      {
+        "label": "急性水生毒性 类别 3",
+        "value": "",
+        "kind": "field",
+        "editable": true
+      },
+      {
+        "label": "慢性水生毒性 类别 3",
+        "value": "",
+        "kind": "field",
+        "editable": true
+      }
+    ]
+  },
+  {
+    "section": 3,
+    "title": "3. 成分/组成资料",
+    "big_titles": [
+      {
+        "seq": "3.1",
+        "title": "产品类型",
+        "value": "混合物",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "3.2",
+        "title": "成分",
+        "value": "",
+        "kind": "sub",
+        "editable": false,
+        "children": []
+      }
+    ],
+    "fields": [
+      {
+        "label": "氢化甲醛与苯胺的聚合物",
+        "value": "氢化甲醛与苯胺的聚合物 | CAS: 135108-88-2 | 含量: 10-25",
+        "kind": "component",
+        "editable": true
+      },
+      {
+        "label": "聚醚二胺",
+        "value": "聚醚二胺 | CAS: 商业机密 | 含量: 5-10",
+        "kind": "component",
+        "editable": true
+      },
+      {
+        "label": "三亚乙基四胺",
+        "value": "三亚乙基四胺 | CAS: 112-24-3 | 含量: 1-3",
+        "kind": "component",
+        "editable": true
+      }
+    ]
+  },
+  {
+    "section": 4,
+    "title": "4.急救措施",
+    "big_titles": [
+      {
+        "seq": "4.1",
+        "title": "一般措施",
+        "value": "寻求医生意见。 如果呼吸不规律或停止，给予人工呼吸。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "4.2",
+        "title": "误服",
+        "value": "防止呕吐，将受害者的头侧放. 切勿给失去知觉者喂食任何东\n西。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "4.3",
+        "title": "接触眼睛",
+        "value": "立即用大量水冲洗至少 15 分钟,包括眼睑下部。取下隐形眼\n镜。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "4.4",
+        "title": "接触皮肤",
+        "value": "立即用肥皂和大量的水冲洗。立即用大量的水冲洗至少 15 分\n钟。立即脱掉被污染的衣服和鞋。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "4.5",
+        "title": "吸入",
+        "value": "移至空气清新的地方。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 5,
+    "title": "5.消防措施",
+    "big_titles": [
+      {
+        "seq": "5.1",
+        "title": "合适的灭火剂",
+        "value": "二氧化碳。 化学干粉。 干砂。 石灰粉抗醇型泡沫。 雾状\n水。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "5.2",
+        "title": "不合适的灭火剂",
+        "value": "高流量的水喷射",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "5.3",
+        "title": "物质或混合物的特殊危害",
+        "value": "不完全的燃烧会产生一氧化碳. 可能产生氨气. 可能产生有\n毒的氮氧化物气体. 燃烧产生令人厌恶的和有毒的烟气。 下风口的人员必须疏散。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "5.4",
+        "title": "消防预防措施和保护设备",
+        "value": "使用个人防护设备。 如有必要，佩戴自给式呼吸器进行消防作业。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 6,
+    "title": "6.意外泄漏措施",
+    "big_titles": [
+      {
+        "seq": "6.1",
+        "title": "个人预防措施、应急程序",
+        "value": "人员撤离到安全地带。 穿戴适当的防护服、手套和防护眼\n镜 / 面罩。使用自给式呼吸器和化学防护服",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "6.2",
+        "title": "环境保护措施",
+        "value": "建一个围堰防止扩散 使用适当的容器以避免环境污染。 不要让泄漏的物质进入下水道或排水沟",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "6.3",
+        "title": "污染物收集和清除的方法",
+        "value": "用化学品吸收材料或必要时用干沙收集，并储存与密闭容器中。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 7,
+    "title": "7.操作和储存",
+    "big_titles": [
+      {
+        "seq": "7.1",
+        "title": "安全操作防范",
+        "value": "供足够的通风，使浓度不超过接触限值。 配备方便的供水设施或洗眼设施。\n使用个人防护设备。每班工作结束后要洗手不要在使用该产品的配方中使用亚硝酸钠或其他亚硝基化剂.怀疑会形成致癌的亚硝胺. 应急淋浴器和洗眼器应该随时可用. 遵守政府规定的工作方法。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "7.2",
+        "title": "安全储存条件",
+        "value": "不要贮存在酸附近。 不要接触氧化物. 使容器保持密闭，置\n于干燥、阴凉、通风良好的地方",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 8,
+    "title": "8.接触控制/个人防护",
+    "big_titles": [
+      {
+        "seq": "8.1",
+        "title": "控制参数",
+        "value": "",
+        "kind": "sub",
+        "editable": false,
+        "children": [
+          {
+            "label": "",
+            "value": "根据EC指令2006/121/EG,无可用的接触限值信息",
+            "kind": "note",
+            "editable": true
+          }
+        ]
+      },
+      {
+        "seq": "8.2",
+        "title": "暴露控制",
+        "value": "",
+        "kind": "sub",
+        "editable": false,
+        "children": [
+          {
+            "label": "呼吸系统防护",
+            "value": "通风不足时，要使用适当的呼吸器。 在通风良好的区域时，不需要。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "手部防护",
+            "value": "其他信息: PVC 可处理手套, 聚乙烯醇手套.\n其他信息: 如果风险评估认为有必要，就要在操作该化学产品是一直带符合标准的防化，防渗透手套",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "眼睛防护",
+            "value": "戴眼罩/面罩。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "身体防护",
+            "value": "穿着适当的防护服。",
+            "kind": "field",
+            "editable": true
+          }
+        ]
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 9,
+    "title": "9. 物理和化学特性",
+    "big_titles": [
+      {
+        "seq": "9.1",
+        "title": "外 观",
+        "value": "黄色至浅褐色透明液体",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.2",
+        "title": "嗅觉阀值",
+        "value": "胺味",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.3",
+        "title": "pH值",
+        "value": "9-10",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.4",
+        "title": "离子性",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.5",
+        "title": "初沸点",
+        "value": "＞105℃",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.6",
+        "title": "闪点",
+        "value": "＞94℃",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.7",
+        "title": "蒸发速率",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.8",
+        "title": "可燃性（固态、气态）",
+        "value": "不适用",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.9",
+        "title": "燃烧值",
+        "value": "不适用",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.10",
+        "title": "相对蒸气密度",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.11",
+        "title": "相对密度",
+        "value": "约1.06g/cm3",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.12",
+        "title": "水溶性",
+        "value": "可混溶",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.13",
+        "title": "表面张力",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.14",
+        "title": "辛醇/水分配系数的对数值",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.15",
+        "title": "自燃温度",
+        "value": "不适用",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.16",
+        "title": "引燃温度",
+        "value": "无数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.17",
+        "title": "动力粘度",
+        "value": "10000-30000 mPa.s",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.18",
+        "title": "固体含量",
+        "value": "70±2%",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "9.19",
+        "title": "其他信息",
+        "value": "上述数据非产品指标，产品指标请参见产品技术信息表。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 10,
+    "title": "10.稳定性和反应性",
+    "big_titles": [
+      {
+        "seq": "10.1",
+        "title": "化学稳定性",
+        "value": "根据规范使用，不会发生分解。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "10.2",
+        "title": "危险分解产物",
+        "value": "硝酸。 氨、氮氧化物，氮的氧化物会与水蒸气反应生成腐蚀性的硝酸。\n一氧化碳、二氧化碳、亚硝胺、氯",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "10.3",
+        "title": "可能的危害反应",
+        "value": "正确储存或操作时，无危害反应。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 11,
+    "title": "11.毒性资料",
+    "big_titles": [
+      {
+        "seq": "11.1",
+        "title": "急性毒性",
+        "value": "无可得到的数据\n急性毒性（列出所有可能的接触途径）\n混合物急性毒性评估: 1,289.84 mg/kg\n混合物急性毒性评估: 17,045.08 mg/kg\n聚醚二胺 LD 50 (大鼠, 8 h): > 0.74 mg/l 一次接触后无毒; 一次接触后无毒;\n三亚乙基四胺 一次接触后无毒; 无致皮肤腐蚀作用的数据 一次接触后无毒; 无致皮肤腐蚀作用的数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.2",
+        "title": "主要皮肤刺激性",
+        "value": "皮肤腐蚀/刺激\n无可得到的数据\n氢化甲醛与苯胺的聚合物 腐蚀性的。 , > 1.01 - < 4 h\n聚醚二胺 眼睛刺激性试验 (兔): 腐蚀性的。 , > 3.01 分钟 - < 1 h\n三亚乙基四胺 腐蚀性的。 , > 3.01 分钟 - < 1 h",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.3",
+        "title": "主要眼睛刺激性",
+        "value": "严重眼损伤/眼刺激\n无可得到的数据\n氢化甲醛与苯胺的聚合物 对眼睛有严重损害的风险。\n呼吸或皮肤过敏\n无可得到的数据\n化甲醛与苯胺的聚合物 接触皮肤会引起过敏。\n三亚乙基四胺 (豚鼠)接触皮肤会引起过敏。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.5",
+        "title": "致突变性",
+        "value": "生殖细胞致突变性\n无可得到的数据\n氢化甲醛与苯胺的聚合物 Ames 试验: 阴性\n染色体变异 (OECD 473): 阴性\n聚醚二胺 (OECD 476)阴性\n无可得到的数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.6",
+        "title": "致癌性",
+        "value": "无可得到的数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.7",
+        "title": "生殖毒性",
+        "value": "无可得到的数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.8",
+        "title": "特异性靶器官系统毒性",
+        "value": "特异性靶器官毒性-一次接触\n无可得到的数据\n三亚乙基四胺 未分类\n特异性靶器官毒性-反复接触\n无可得到的数据\n氢化甲醛与苯胺的聚合物 肾 - 类别 2 长期或重复接触可能对器官造成伤害。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "11.9",
+        "title": "吸入危险",
+        "value": "吸入危害\n无可得到的数据\n氢化甲醛与苯胺的聚合物 未分类\n无可得到的数据",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 12,
+    "title": "12.生态信息",
+    "big_titles": [
+      {
+        "seq": "12.1",
+        "title": "生态毒性",
+        "value": "该产品无可用的生态毒理学研究。禁止排入下水道，废水或土壤中。",
+        "kind": "field",
+        "editable": true,
+        "children": [
+          {
+            "label": "生态毒性",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "急性水生毒性",
+            "value": "鱼",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "产品",
+            "value": "无可得到的数据",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "组分",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "氢化甲醛与苯胺的聚合物 LC 50 (孔雀鱼, 96 h)",
+            "value": "63 mg/l",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "聚醚二胺 LC 50 (Leuciscus idus (高体雅罗鱼), 96 h)",
+            "value": "> 100 mg/l",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "水生无脊椎动物",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "产品",
+            "value": "无可得到的数据",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "组分",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "氢化甲醛与苯胺的聚合物 EC50 (水蚤, 48 h)",
+            "value": "15.4 mg/l",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "聚醚二胺 EC50 (水蚤, 48 h)",
+            "value": "15 mg/l",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "对水生植物的毒性",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "产品",
+            "value": "无可得到的数据",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "组分",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "氢化甲醛与苯胺的聚合物 EC50 (Desmodesmus subspicatus (绿藻), 72 h)",
+            "value": "43.94 mg/l",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "聚醚二胺 EC50 (海藻, 71 h)",
+            "value": "135 mg/l",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "对微生物的毒性",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "产品",
+            "value": "无可得到的数据",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "慢性水生毒性",
+            "value": "鱼",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "产品",
+            "value": "无可得到的数据",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "水生无脊椎动物",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "产品",
+            "value": "无可得到的数据",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "对水生植物的毒性",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "产品",
+            "value": "无可得到的数据",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "对微生物的毒性",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "产品",
+            "value": "无可得到的数据",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "持久性和降解性",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "生物降解",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "产品",
+            "value": "无可得到的数据",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "组分",
+            "value": "氢化甲醛与苯胺的聚合物 0 % (28 d) 本品不能生物降解。\n聚醚二胺 < 60 % (28 d) 本品不能生物降解。",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "BOD/COD 比值",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "产品",
+            "value": "无可得到的数据",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "潜在的生物累积性",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "生物富集系数 (BCF)",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "产品",
+            "value": "无可得到的数据",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "组分",
+            "value": "氢化甲醛与苯胺的聚合物 Cyprinus carpio (鲤鱼), 无生物蓄积。\nn-辛醇/水分配系数（log Kow）",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "产品",
+            "value": "无可得到的数据",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "组分",
+            "value": "",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "氢化甲醛与苯胺的聚合物 Log Kow",
+            "value": "2.68 21 °C",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "土壤中的迁移性",
+            "value": "产品 无可得到的数据",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "PBT 和 vPvB 评估结果",
+            "value": "产品 无可得到的数据",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "其它不良影响",
+            "value": "其它危害",
+            "kind": "field",
+            "editable": true
+          },
+          {
+            "label": "产品",
+            "value": "无可得到的数据",
+            "kind": "field",
+            "editable": true
+          }
+        ]
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 13,
+    "title": "13. 处理注意事项",
+    "big_titles": [],
+    "fields": [
+      {
+        "label": "废弃处理方法",
+        "value": "不应释放入环境，勿倒入任何下水道，地面，或倒入任何水体中。请遵循当地和国家的法律及规章, 不同地区的法规可能不同。化学废物的鉴定和后续遵循相关法律规定是废物产生者的主体责任，列入国家危险废物名录的废物，需委托具有相关资质的废物处理机构进行处置。化学废物产生者必须确定废弃的化学品是否是归类为一般废物或危险废物。作\n为化学产品的供应商，无法得知使用单位的具体用途、加工过程和工艺来源，故不能提供产品废弃后的废物归类信息",
+        "kind": "field",
+        "editable": true
+      },
+      {
+        "label": "污染包装物",
+        "value": "未受污染的包装可以回收再利用。已沾染内容物的包装应按与其内容物相同的处理方式，需要委托具有相关资质的废物处理机构进行回收或处置。请遵循当地和国家的法律及规章, 不同地区的法规可能不同。不能作为生活垃圾处理",
+        "kind": "field",
+        "editable": true
+      }
+    ]
+  },
+  {
+    "section": 14,
+    "title": "14. 运输信息",
+    "big_titles": [
+      {
+        "seq": "14.1",
+        "title": "联合国编号 UN number",
+        "value": "欧洲陆运危规 / ADR/RID: 2735\n国际海运危规 / IMDG: 2735\n国际空运危规 / IATA-DGR:2735",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "14.2",
+        "title": "联合国运输名称 UN proper shipping name",
+        "value": "欧洲陆运危规: 液态胺，腐蚀性\nADR/RID: AMINES, LIQUID, CORROSIVE, N.O.S.\n国际海运危规: 液态胺，腐蚀性\nIMDG: AMINES, LIQUID, CORROSIVE, N.O.S.\n国际空运危规: 液态胺，腐蚀性\nIATA-DGR: Amines, liquid, corrosive, n.o.s.",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "14.3",
+        "title": "运输危险类别 Transport hazard class(es)",
+        "value": "欧洲陆运危规 / ADR/RID: 8\n国际海运危规 / IMDG: 8\n国际空运危规 / IATA-DGR: 8",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "14.4",
+        "title": "包裹组Packaging group",
+        "value": "欧洲陆运危规 / ADR/RID: II\n国际海运危规 / IMDG: II\n国际空运危规 / IATA-DGR: II",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "14.5",
+        "title": "环境危害 Environmental hazards",
+        "value": "ADR/RID: 否\n国际海运危险货物规则 (IMDG)\n国际空运危规: 否\n海洋污染物（是/否）: 否",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      },
+      {
+        "seq": "14.6",
+        "title": "特殊防范措施 Special precautions for user",
+        "value": "请根据化学品性质选择合适的运输工具及相应的运输储存条件。运输工具应配备相应品种和数量的消防材料及泄露应急处理设备。如选择公路运输，请按规定路线行驶。",
+        "kind": "field",
+        "editable": true,
+        "children": []
+      }
+    ],
+    "fields": []
+  },
+  {
+    "section": 15,
+    "title": "15. 法规信息",
+    "big_titles": [],
+    "fields": [
+      {
+        "label": "",
+        "value": "物质或混合物的相关安全、健康和环保法律法规",
+        "kind": "note",
+        "editable": true
+      },
+      {
+        "label": "其它的规定",
+        "value": "",
+        "kind": "field",
+        "editable": true
+      },
+      {
+        "label": "符合下列法规要求",
+        "value": "危险化学品安全管理条例，国务院令344号\nGB/T 16483-2008 化学品安全技术说明书内容和项目顺序\nGB 13690-2009 化学品分类和危险性公示通则\nGB 20576- GB20598 化学品分类，警示标签和警示性说明安全规范",
+        "kind": "field",
+        "editable": true
+      }
+    ]
+  },
+  {
+    "section": 16,
+    "title": "16. 其他信息",
+    "big_titles": [],
+    "fields": [
+      {
+        "label": "",
+        "value": "就我们所掌握的知识信息，截止本安全技术说明书发布之日，它提供的资料是正确的。所提供的信息仅仅作为安全处理，使用，生产，储存，运输，处置和排放的指导书，而不是一份担保或品质说明书。本资料只针对所指定的具体物料，而对这种物料与其它物料混合使用或在其它制程中使用的情况，则未必有效（除非在文本中有特别说明）。",
+        "kind": "note",
+        "editable": true
+      }
+    ]
+  }
+]
