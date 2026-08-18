@@ -77,7 +77,7 @@ def main() -> int:
             print(f"  {model:<16} [{src}] {n:>3} 行 | {file_}")
         return 0
     if "--model" in rest:
-        # 按型号检索 (唯一索引): 三级树 / JSON / TSV, 支持 --sections 范围过滤
+        # 按型号检索 (唯一索引): 三级树 / JSON / TSV, 支持 --sections 范围过滤与 --s9-clean 过滤无数据
         q = rest[rest.index("--model") + 1]
         hits = find_models(db, q)
         if not hits:
@@ -85,16 +85,35 @@ def main() -> int:
             return 1
         mid, model, src, file_, n, ts = hits[0]
         sections = _parse_sections(rest)
+        s9_active_only = ("--s9-clean" in rest or "--active-only" in rest or "--clean" in rest)
+        out_path = rest[rest.index("--out") + 1] if ("--out" in rest and rest.index("--out") + 1 < len(rest)) else None
+        if "--write-items" in rest:
+            from core.msds_db import model_to_write_items
+            items = model_to_write_items(db, mid, s9_active_only=True)
+            import json as _json
+            dumped = _json.dumps(items, ensure_ascii=False, indent=2)
+            if out_path:
+                Path(out_path).write_text(dumped, encoding="utf-8")
+                print(f"✅ 覆写写入项已导出 → {out_path} (S9 有效字段 {len(items['sections'].get('9', []))} 项)")
+            else:
+                print(dumped)
+            return 0
         if "--json" in rest:
-            print(render_model_json(db, mid, sections))
+            txt = render_model_json(db, mid, sections, s9_active_only=s9_active_only)
         elif "--tsv" in rest:
-            print(render_model_tsv(db, mid, sections))
+            txt = render_model_tsv(db, mid, sections, s9_active_only=s9_active_only)
         else:
             d = model_detail(db, mid)
-            print(f"型号: {model} | 来源: {src} | 明细 {n} 行 | 入库: {ts}")
+            header = f"型号: {model} | 来源: {src} | 明细 {n} 行 | 入库: {ts}\n"
             if d.get("sha256"):
-                print(f"sha256: {d['sha256'][:16]}… | 文件: {file_}")
-            print(render_model_tree(db, mid, sections))
+                header += f"sha256: {d['sha256'][:16]}… | 文件: {file_}\n"
+            txt = header + render_model_tree(db, mid, sections, s9_active_only=s9_active_only)
+        if out_path:
+            enc = "utf-8-sig" if "--tsv" in rest else "utf-8"
+            Path(out_path).write_text(txt, encoding=enc)
+            print(f"✅ 已导出 → {out_path}")
+        else:
+            print(txt)
         return 0
     if "--model-search" in rest:
         # 关键词检索库内数据 → 命中型号清单 + 节/标签位置

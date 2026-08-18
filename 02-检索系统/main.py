@@ -52,6 +52,7 @@ def _extract_cli(argv: list[str]) -> int:
     out: str | None = None
     sections: set[int] | None = None
     flat = False          # --flat: 扁平输出 (旧版行为)
+    s9_active_only = False # --s9-clean / --active-only: S9 仅输出有实际有效数据的项
     i = 0
     while i < len(argv):
         a = argv[i]
@@ -65,6 +66,8 @@ def _extract_cli(argv: list[str]) -> int:
             fmt = "tsv"; i += 1
         elif a == "--flat":
             flat = True; i += 1
+        elif a in ("--s9-clean", "--active-only", "--clean"):
+            s9_active_only = True; i += 1
         elif a == "--out" and i + 1 < len(argv):
             out = argv[i + 1]; i += 2
         elif a == "--sections" and i + 1 < len(argv):
@@ -73,7 +76,7 @@ def _extract_cli(argv: list[str]) -> int:
         else:
             paths.append(a); i += 1
     if not paths:
-        print("用法: python main.py --extract <docx...> [--query 词] [--scope label|value|all|section] [--json|--tsv] [--flat] [--out 文件] [--sections 1,3,9]")
+        print("用法: python main.py --extract <docx...> [--query 词] [--scope label|value|all|section] [--json|--tsv] [--s9-clean|--active-only] [--flat] [--out 文件] [--sections 1,3,9]")
         return 2
     if len(paths) == 1:
         r = read_msds(paths[0])
@@ -81,7 +84,7 @@ def _extract_cli(argv: list[str]) -> int:
         from core.extract import (flatten_nodes, render_tree, render_tree_json,
                                   search_tree)
         from core.msds_db import listed_tree_nodes_from_result
-        nodes = listed_tree_nodes_from_result(r, sections)
+        nodes = listed_tree_nodes_from_result(r, sections, s9_active_only=s9_active_only)
         if query:
             nodes = search_tree(nodes, query, scope)
         entries = flatten_nodes(nodes)   # 统计用
@@ -110,9 +113,7 @@ def _extract_cli(argv: list[str]) -> int:
     for p in paths:
         try:
             r = read_msds(p)
-            nodes = listed_tree_nodes_from_result(r, sections)
-            if query:
-                nodes = [n for n in nodes if n.number in sections]
+            nodes = listed_tree_nodes_from_result(r, sections, s9_active_only=s9_active_only)
             if query:
                 nodes = search_tree(nodes, query, scope)
             collected[Path(p).name] = nodes

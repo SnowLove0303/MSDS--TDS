@@ -16,7 +16,8 @@ from tkinter import ttk, filedialog
 from pathlib import Path
 
 from core.msds_db import (SEC_TITLES, find_models, listed_section_rows,
-                          model_detail, model_search, open_db)
+                          model_detail, model_search, model_to_write_items,
+                          open_db)
 
 from .section_tree import SectionView
 from .theme import (COLOR_BORDER, COLOR_GRAY, COLOR_GREEN, COLOR_NAV,
@@ -37,6 +38,8 @@ class DbSearchWindow(tk.Toplevel):
         self._conn = None
         self._current = None        # (model_id, model)
         self._current_model_name = ""
+        self._current_sec = 1
+        self._s9_clean_var = tk.BooleanVar(value=False)
 
         self._build_top()
         self._build_mid()
@@ -60,31 +63,39 @@ class DbSearchWindow(tk.Toplevel):
 
         self._db_path_var = tk.StringVar()
         tk.Label(bar, text="库:", bg=COLOR_PANEL, fg=COLOR_GRAY).pack(side="left")
-        e = tk.Entry(bar, textvariable=self._db_path_var, width=52)
+        e = tk.Entry(bar, textvariable=self._db_path_var, width=44)
         e.pack(side="left", padx=2)
         tk.Button(bar, text="浏览", command=self._browse_db,
                   bg=COLOR_NAV, fg="#fff", relief="flat").pack(side="left", padx=2)
         tk.Button(bar, text="重新打开", command=self._open_db,
                   bg=COLOR_NAV, fg="#fff", relief="flat").pack(side="left", padx=2)
+        tk.Button(bar, text="📄 导出覆写写入项 (JSON)", command=self._export_write_items,
+                  bg="#0B8043", fg="#fff", relief="flat", padx=10, pady=2,
+                  font=("Microsoft YaHei", 9), cursor="hand2").pack(side="right", padx=(8, 0))
 
         row2 = tk.Frame(self, bg=COLOR_PANEL)
         row2.pack(fill="x", padx=8, pady=2)
         tk.Label(row2, text="🔍 型号:", bg=COLOR_PANEL, fg=COLOR_TEXT).pack(side="left")
         self._model_var = tk.StringVar()
-        me = tk.Entry(row2, textvariable=self._model_var, width=24)
+        me = tk.Entry(row2, textvariable=self._model_var, width=22)
         me.pack(side="left", padx=2)
         me.bind("<Return>", lambda _e: self.refresh_models(self._model_var.get()))
         tk.Button(row2, text="检索型号", command=lambda: self.refresh_models(
             self._model_var.get()), bg=COLOR_NAV, fg="#fff", relief="flat").pack(side="left", padx=2)
         tk.Label(row2, text="关键词:", bg=COLOR_PANEL, fg=COLOR_TEXT).pack(side="left", padx=(12, 2))
         self._kw_var = tk.StringVar()
-        ke = tk.Entry(row2, textvariable=self._kw_var, width=28)
+        ke = tk.Entry(row2, textvariable=self._kw_var, width=26)
         ke.pack(side="left", padx=2)
         ke.bind("<Return>", lambda _e: self._search_kw())
         tk.Button(row2, text="检索内容", command=self._search_kw,
                   bg=COLOR_GREEN, fg="#fff", relief="flat").pack(side="left", padx=2)
         tk.Button(row2, text="✕ 清除", command=self._clear,
                   bg=COLOR_BORDER, fg=COLOR_TEXT, relief="flat").pack(side="left", padx=2)
+
+        # 过滤口子: S9 仅显有值项
+        tk.Checkbutton(row2, text="S9仅显有值项 (非无数据)", variable=self._s9_clean_var,
+                       command=self._on_toggle_s9_clean, bg=COLOR_PANEL, fg=COLOR_TEXT,
+                       font=("Microsoft YaHei", 9), selectcolor=COLOR_PANEL).pack(side="left", padx=(14, 2))
 
     # ---------------- 中部: 型号列表 + 节树 + 视图 ----------------
 
@@ -213,6 +224,30 @@ class DbSearchWindow(tk.Toplevel):
         self._kw_var.set("")
         self.refresh_models("")
 
+    def _on_toggle_s9_clean(self):
+        """切换 S9 是否仅显示有值项."""
+        if self._current is not None:
+            self._render_section(self._current_sec)
+
+    def _export_write_items(self):
+        """导出当前型号的纯净覆写写入项 JSON (S9 仅有值项, 直通覆写模块)."""
+        if self._conn is None or self._current is None:
+            self.status_var.set("⚠️ 请先在左侧选择一个型号")
+            return
+        mid, model = self._current
+        items = model_to_write_items(self._conn, mid, s9_active_only=True)
+        import json
+        default_name = f"write_items_{model}_pure.json"
+        p = filedialog.asksaveasfilename(
+            title=f"导出 {model} 覆写写入项 (JSON)",
+            initialfile=default_name,
+            defaultextension=".json",
+            filetypes=[("JSON 文件", "*.json"), ("所有文件", "*.*")])
+        if p:
+            Path(p).write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
+            s9_n = len(items.get("sections", {}).get("9", []))
+            self.status_var.set(f"✅ 已导出 {model} 写入项 → {Path(p).name} (S9 有效字段 {s9_n} 项)")
+
     def _on_model_select(self, _event):
         sel = self.model_tree.selection()
         if not sel:
@@ -244,6 +279,7 @@ class DbSearchWindow(tk.Toplevel):
             f"入库 {d['created_at']} · 文件 {d['source_file']}")
         # 默认渲染第一个有数据的节
         first = sorted(have)[0] if have else 1
+        self._current_sec = first
         self.sec_tree.selection_set(self._sec_items.get(first, ""))
         self._render_section(first)
 
@@ -253,16 +289,20 @@ class DbSearchWindow(tk.Toplevel):
             return
         for num, iid in self._sec_items.items():
             if iid == sel[0]:
+                self._current_sec = num
                 self._render_section(num)
                 break
 
     def _render_section(self, num: int):
         if self._current is None:
             return
+        self._current_sec = num
         mid, model = self._current
         d = model_detail(self._conn, mid)
         title = f"{num}. {SEC_TITLES.get(num, f'第{num}节')}"
-        # 清单骨架渲染: 结构与 PEA-4139 模板参照一致, 缺值标「无数据」
-        rows = listed_section_rows(self._conn, mid, num)
-        meta = f"{model} [{d.get('source', '')}] · 第{num}节 · 按飞书清单结构渲染"
+        s9_clean = self._s9_clean_var.get()
+        # 清单骨架渲染: 结构与 PEA-4139 模板参照一致, 缺值标「无数据」; s9_clean=True 时仅显有效数据项
+        rows = listed_section_rows(self._conn, mid, num, s9_active_only=s9_clean)
+        mode_tag = " (S9仅有值项)" if (num == 9 and s9_clean) else ""
+        meta = f"{model} [{d.get('source', '')}] · 第{num}节 · 按飞书清单结构渲染{mode_tag}"
         self.view.show_rows(num, f"{title} — {model}", rows, meta=meta)

@@ -748,8 +748,13 @@ def model_tree_nodes(conn: sqlite3.Connection, model_id: int,
 
 
 def listed_tree_nodes(conn: sqlite3.Connection, model_id: int,
-                      sections: set[int] | None = None) -> list:
-    """按清单骨架构建三级树 (CLI --model 渲染): 结构与 PEA-4139 模板参照一致."""
+                      sections: set[int] | None = None,
+                      s9_active_only: bool = False,
+                      active_only: bool = False) -> list:
+    """按清单骨架构建三级树 (CLI --model 渲染): 结构与 PEA-4139 模板参照一致.
+
+    s9_active_only=True: Section 9 仅输出有真实数据的项 (排除 无数据/不适用 占位).
+    """
     from .extract import BigTitleNode, FieldNode, SectionNode
     nodes: list[SectionNode] = []
     for num in sorted(_SKELETON):
@@ -758,7 +763,9 @@ def listed_tree_nodes(conn: sqlite3.Connection, model_id: int,
         sn = SectionNode(number=num, title=SEC_TITLES.get(num, f"第{num}节"),
                          full_title=sec_full_title(num))
         cur: BigTitleNode | None = None
-        for row in listed_section_rows(conn, model_id, num):
+        for row in listed_section_rows(conn, model_id, num,
+                                      s9_active_only=s9_active_only,
+                                      active_only=active_only):
             if row.kind == "sub":
                 cur = BigTitleNode(seq=row.seq, title=row.label, kind="sub")
                 sn.big_titles.append(cur)
@@ -791,28 +798,40 @@ def listed_tree_nodes(conn: sqlite3.Connection, model_id: int,
 
 
 def render_model_tree(conn: sqlite3.Connection, model_id: int,
-                      sections: set[int] | None = None) -> str:
+                      sections: set[int] | None = None,
+                      s9_active_only: bool = False,
+                      active_only: bool = False) -> str:
     """三级父子级树文本 (清单骨架, 同 main.py --extract 的 render_tree 格式)."""
     from .extract import render_tree
-    return render_tree(listed_tree_nodes(conn, model_id, sections))
+    return render_tree(listed_tree_nodes(conn, model_id, sections,
+                                         s9_active_only=s9_active_only,
+                                         active_only=active_only))
 
 
 def render_model_json(conn: sqlite3.Connection, model_id: int,
-                      sections: set[int] | None = None) -> str:
+                      sections: set[int] | None = None,
+                      s9_active_only: bool = False,
+                      active_only: bool = False) -> str:
     """嵌套 JSON (清单骨架, 同 render_tree_json)."""
     from .extract import render_tree_json
-    return render_tree_json(listed_tree_nodes(conn, model_id, sections))
+    return render_tree_json(listed_tree_nodes(conn, model_id, sections,
+                                              s9_active_only=s9_active_only,
+                                              active_only=active_only))
 
 
 def render_model_tsv(conn: sqlite3.Connection, model_id: int,
-                     sections: set[int] | None = None) -> str:
+                     sections: set[int] | None = None,
+                     s9_active_only: bool = False,
+                     active_only: bool = False) -> str:
     """扁平 TSV: 文件|节|大标题|小标题|标签|字段 (清单骨架)."""
     from .extract import flatten_nodes
     model = conn.execute("SELECT model FROM msds_model WHERE model_id=?",
                          (model_id,)).fetchone()
     fname = model[0] if model else f"model{model_id}"
     rows = ["文件\t节\t大标题\t小标题\t标签\t字段"]
-    for e in flatten_nodes(listed_tree_nodes(conn, model_id, sections)):
+    for e in flatten_nodes(listed_tree_nodes(conn, model_id, sections,
+                                            s9_active_only=s9_active_only,
+                                            active_only=active_only)):
         rows.append("\t".join([
             fname, str(e.section), e.big_title, e.sub_title,
             e.full_label(), e.value.replace("\t", " ").replace("\n", " ")]))
@@ -952,15 +971,16 @@ _SKELETON: dict[int, list[tuple]] = {
         ("field", "9.17", "引燃温度"), ("field", "9.18", "分解温度"),
         ("field", "9.19", "动力粘度"), ("field", "9.20", "爆炸特性"),
         ("field", "9.21", "粉尘爆炸级别"), ("field", "9.22", "固体含量"),
-        ("field", "9.23", "其他信息"),
-        # 14 项全量扩充字段 (方案 2: 23 → 37 项):
-        ("field", "9.24", "有效成分"), ("field", "9.25", "玻璃化温度"),
-        ("field", "9.26", "最低成膜温度"), ("field", "9.27", "NCO含量"),
-        ("field", "9.28", "羟基含量"), ("field", "9.29", "熔点/凝固点"),
-        ("field", "9.30", "酸值"), ("field", "9.31", "碘值"),
-        ("field", "9.32", "倾点"), ("field", "9.33", "浊点"),
-        ("field", "9.34", "分子量"), ("field", "9.35", "含量"),
-        ("field", "9.36", "APHA值"), ("field", "9.37", "HLB值")],
+        # 14 项全量扩充字段 (9.23 ~ 9.36):
+        ("field", "9.23", "有效成分"), ("field", "9.24", "玻璃化温度"),
+        ("field", "9.25", "最低成膜温度"), ("field", "9.26", "NCO含量"),
+        ("field", "9.27", "羟基含量"), ("field", "9.28", "熔点/凝固点"),
+        ("field", "9.29", "酸值"), ("field", "9.30", "碘值"),
+        ("field", "9.31", "倾点"), ("field", "9.32", "浊点"),
+        ("field", "9.33", "分子量"), ("field", "9.34", "含量"),
+        ("field", "9.35", "APHA值"), ("field", "9.36", "HLB值"),
+        # 其他信息必须始终放在 Section 9 序号最末项 (9.37):
+        ("field", "9.37", "其他信息")],
     10: [("field", "10.1", "化学稳定性"), ("field", "10.2", "危险分解产物"),
          ("field", "10.3", "可能的危害反应"), ("field", "10.4", "应避免的条件"),
          ("field", "10.5", "禁配物")],
@@ -985,16 +1005,29 @@ _SKELETON: dict[int, list[tuple]] = {
 
 _ND = "无数据"   # 缺失值统一标注 (结构冻结: 宁可无数据不扩结构)
 
+# 占位符与无效值正则 (用于 S9 仅有数据项输出 / 覆写写入项导出):
+_PLACEHOLDER_RE = re.compile(
+    r"^(无数据|无数据资料|不适用|无适用资料|未提供|无资料|无|N/A|n/a|None|null|"
+    r"无数据。|不适用。|无。|Not applicable|not applicable|NA|—|--|-)$", re.IGNORECASE)
+
+
+def is_meaningful_value(v: str) -> bool:
+    """判断字段值是否为有意义的真实数据 (排除空值、无数据、不适用等占位符)."""
+    t = (v or "").strip()
+    return bool(t) and not bool(_PLACEHOLDER_RE.match(t))
+
+
 # ------------------------------------------------------------------
 # 结构写死 (结构冻结强制校验)
 #
 # 用户确认 (2026-08-17): 父子级结构及标签字段必须固定死, 防止其他线程/
 # Agent 在批量洗数据时改动. 本指纹固化当前 17 节 schema 字段集 + 骨架
-# (含 S9 方案2 全量扩充 14 字段 → S9 37 项, 全库 114 宽表列/116 字典项),
-# build_msds_db.py 每次入库前强制校验, 不一致即拒绝入库.
+# (含 S9 方案2 全量扩充 14 字段 → S9 37 项, 全库 114 宽表列/116 字典项,
+#  其他信息始终置于 9.37 序号末项), build_msds_db.py 每次入库前强制校验,
+# 不一致即拒绝入库.
 # ------------------------------------------------------------------
 
-STRUCT_FINGERPRINT = "47e439749e65e5fc"
+STRUCT_FINGERPRINT = "68c575962db1e886"
 
 
 def structure_fingerprint() -> str:
@@ -1026,11 +1059,16 @@ def validate_structure() -> str:
 
 def _listed_rows_core(num: int, by_std: dict[str, list[str]],
                       notes: dict[str, list[str]], comps: list,
-                      subtable, model_name: str = "") -> list:
+                      subtable, model_name: str = "",
+                      s9_active_only: bool = False,
+                      active_only: bool = False) -> list:
     """骨架渲染核心 (数据源无关): 按 _SKELETON 渲染一节 SectionRow 列表.
 
     供 数据库检索 (listed_section_rows) 与 docx 直读 (listed_rows_from_result)
     共用, 保证两类展示结构完全一致 (基于结构找内容).
+
+    s9_active_only=True: Section 9 只输出有实际有效数据的项 (非 无数据/不适用),
+    专为覆写模块写入 / S9 瘦身输出提供口子, 避免 37 个字段全量写入造成 docx 冗长.
     """
     from .structure import SectionRow
     out: list[SectionRow] = []
@@ -1051,6 +1089,9 @@ def _listed_rows_core(num: int, by_std: dict[str, list[str]],
         elif kind == "field":
             vals = by_std.get(label) or []
             v = "\n".join(x for x in vals if x and x.strip()).strip()
+            filter_this = active_only or (s9_active_only and num == 9)
+            if filter_this and not is_meaningful_value(v):
+                continue
             out.append(SectionRow(kind="field", seq=seq, label=label,
                                   value=v or _ND, editable=True))
         elif kind == "note":
@@ -1108,8 +1149,12 @@ def _listed_rows_core(num: int, by_std: dict[str, list[str]],
 
 
 def listed_section_rows(conn: sqlite3.Connection, model_id: int,
-                        num: int) -> list:
-    """数据库检索骨架渲染: 从明细收集 → _listed_rows_core (与 docx 直读同结构)."""
+                        num: int, s9_active_only: bool = False,
+                        active_only: bool = False) -> list:
+    """数据库检索骨架渲染: 从明细收集 → _listed_rows_core (与 docx 直读同结构).
+
+    s9_active_only=True: Section 9 仅输出有实际有效数据的项 (排除 无数据/不适用 占位).
+    """
     from .structure import SectionRow
     rows = _section_rows(conn, model_id, {num})
     by_std: dict[str, list[str]] = {}
@@ -1133,14 +1178,19 @@ def listed_section_rows(conn: sqlite3.Connection, model_id: int,
     model = conn.execute("SELECT model FROM msds_model WHERE model_id=?",
                          (model_id,)).fetchone()
     return _listed_rows_core(num, by_std, notes, comps, subtable,
-                             model[0] if model else "")
+                             model[0] if model else "",
+                             s9_active_only=s9_active_only,
+                             active_only=active_only)
 
 
-def listed_rows_from_result(result, num: int) -> list:
+def listed_rows_from_result(result, num: int, s9_active_only: bool = False,
+                            active_only: bool = False) -> list:
     """docx 直读骨架渲染: 从 ParseResult 按清单骨架渲染一节.
 
     与数据库检索 (listed_section_rows) 完全同结构 — 用户确认: docx 直读
     展示/检索输出也必须符合骨架结构 (后续按输出做匹配覆写).
+
+    s9_active_only=True: Section 9 仅输出有实际有效数据的项.
     """
     from .structure import SectionRow
     sec = result.sections.get(num)
@@ -1174,10 +1224,14 @@ def listed_rows_from_result(result, num: int) -> list:
                     value=f"CAS: {c.cas} | 含量: {c.conc}",
                     editable=c.editable))
     model_name = _model_of(result, result.file_name)
-    return _listed_rows_core(num, by_std, notes, comps, subtable, model_name)
+    return _listed_rows_core(num, by_std, notes, comps, subtable, model_name,
+                             s9_active_only=s9_active_only,
+                             active_only=active_only)
 
 
-def listed_tree_nodes_from_result(result, sections: set[int] | None = None) -> list:
+def listed_tree_nodes_from_result(result, sections: set[int] | None = None,
+                                  s9_active_only: bool = False,
+                                  active_only: bool = False) -> list:
     """docx 直读骨架树 (CLI --extract / GUI 目录): 结构与数据库检索完全一致."""
     from .extract import BigTitleNode, FieldNode, SectionNode
     nodes: list[SectionNode] = []
@@ -1187,7 +1241,9 @@ def listed_tree_nodes_from_result(result, sections: set[int] | None = None) -> l
         sn = SectionNode(number=num, title=SEC_TITLES.get(num, f"第{num}节"),
                          full_title=sec_full_title(num))
         cur: BigTitleNode | None = None
-        for row in listed_rows_from_result(result, num):
+        for row in listed_rows_from_result(result, num,
+                                           s9_active_only=s9_active_only,
+                                           active_only=active_only):
             if row.kind == "sub":
                 cur = BigTitleNode(seq=row.seq, title=row.label, kind="sub")
                 sn.big_titles.append(cur)
@@ -1217,6 +1273,66 @@ def listed_tree_nodes_from_result(result, sections: set[int] | None = None) -> l
                     sn.direct_fields.append(fn)
         nodes.append(sn)
     return nodes
+
+
+def model_to_write_items(conn: sqlite3.Connection, model_id: int,
+                         s9_active_only: bool = True) -> dict:
+    """生成直接对接覆写模块 (msds_overwrite_engine.py) 的标准写入项契约 JSON.
+
+    特点:
+      - S9 理化特性默认 s9_active_only=True: 只输出有真实有效数据的项 (非 无数据/不适用 占位),
+        避免 37 个字段全量写入造成 Word docx 页面冗长过载;
+      - 结构严格符合覆写引擎契约:
+        { "sections": {"0": [...], "1": [...], "3": {...}, "9": [...]},
+          "keep_structure": [2], "empty_policy": "warn" }
+    """
+    detail = model_detail(conn, model_id)
+    model = detail.get("model", "")
+
+    # S0
+    s0_items = [
+        {"seq": "", "label": "产品名称", "value": model},
+        {"seq": "", "label": "产品型号", "value": model}
+    ]
+
+    # S1
+    s1_rows = listed_section_rows(conn, model_id, 1)
+    s1_items = []
+    for r in s1_rows:
+        if r.kind == "field" and is_meaningful_value(r.value):
+            s1_items.append({"seq": r.seq or "", "label": r.label, "value": r.value})
+
+    # S3
+    s3_type = "混合物"
+    s3_comps = []
+    for r in listed_section_rows(conn, model_id, 3):
+        if r.kind == "field" and r.label == "产品类型" and is_meaningful_value(r.value):
+            s3_type = r.value
+        elif r.kind == "subtable" and r.label == "成分":
+            for row in r.sub_rows:
+                if len(row) >= 3 and any(str(x).strip() for x in row):
+                    s3_comps.append({"name": str(row[0]).strip(),
+                                    "cas": str(row[1]).strip(),
+                                    "conc": str(row[2]).strip()})
+    s3_obj = {"产品类型": s3_type, "components": s3_comps}
+
+    # S9 (过滤无数据/不适用)
+    s9_rows = listed_section_rows(conn, model_id, 9, s9_active_only=s9_active_only)
+    s9_items = []
+    for r in s9_rows:
+        if r.kind == "field" and is_meaningful_value(r.value):
+            s9_items.append({"seq": r.seq or "", "label": r.label, "value": r.value})
+
+    return {
+        "sections": {
+            "0": s0_items,
+            "1": s1_items,
+            "3": s3_obj,
+            "9": s9_items
+        },
+        "keep_structure": [2],
+        "empty_policy": "warn"
+    }
 
 
 if __name__ == "__main__":

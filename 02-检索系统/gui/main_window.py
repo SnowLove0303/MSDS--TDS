@@ -95,6 +95,11 @@ class MainWindow(tk.Tk):
         tk.Button(bar2, text="↩️ 恢复默认模板", command=self._restore_default_template,
                   bg="#E8EAED", fg=COLOR_TEXT, relief="flat", padx=12, pady=3,
                   font=("Microsoft YaHei", 10)).pack(side="left", padx=(0, 8))
+        self.s9_clean_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(bar2, text="S9仅显有值项", variable=self.s9_clean_var,
+                       command=lambda: self._show_section(self._current_section),
+                       bg=COLOR_PANEL, fg=COLOR_TEXT, font=("Microsoft YaHei", 9),
+                       selectcolor=COLOR_PANEL).pack(side="left", padx=(0, 8))
 
         # 检索框: 输入关键词 → 过滤左侧目录树 (命中节/字段高亮), 右侧表格跟随
         tk.Label(bar2, text="🔍 检索:", bg=COLOR_PANEL, fg=COLOR_TEXT,
@@ -211,8 +216,10 @@ class MainWindow(tk.Tk):
         if src:
             # 统一骨架: docx 直读展示与数据库检索同结构 (基于结构找内容)
             from core.msds_db import SEC_TITLES, listed_rows_from_result
-            rows = listed_rows_from_result(src, num)
-            title = f"{num}. {SEC_TITLES.get(num, f'第{num}节')} — {Path(src.file_name).stem}"
+            s9_clean = getattr(self, "s9_clean_var", None) and self.s9_clean_var.get()
+            rows = listed_rows_from_result(src, num, s9_active_only=s9_clean)
+            mode_tag = " (S9仅显有值项)" if (num == 9 and s9_clean) else ""
+            title = f"{num}. {SEC_TITLES.get(num, f'第{num}节')}{mode_tag} — {Path(src.file_name).stem}"
             self.section_view.show_rows(num, title, rows, meta="",
                                         overrides=self._editable_overrides,
                                         on_toggle=self._toggle_editable)

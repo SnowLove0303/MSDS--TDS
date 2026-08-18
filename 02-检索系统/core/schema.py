@@ -181,9 +181,7 @@ SECTION_SCHEMAS: dict[int, list[SchemaField]] = {
                                 "Explosion characteristics")),
         SchemaField("粉尘爆炸级别", aliases=("粉尘爆炸", "Dust explosion level")),
         SchemaField("固体含量", aliases=("Solid content", "Solids content", "Solid Content")),
-        SchemaField("其他信息", aliases=("Other information", "Other Information",
-                                "General Information", "General Information Form")),
-        # 14 项全量扩充标准字段 (方案 2: 23 → 37 字段, 覆盖涂料/树脂/单体特有物理量):
+        # 14 项全量扩充标准字段 (9.23 ~ 9.36):
         SchemaField("有效成分", aliases=("有效成份", "Active Ingredient", "effective constituent",
                                 "Active ingredient", " effective constituent")),
         SchemaField("玻璃化温度", aliases=("玻璃化温度Tg/℃", "Tg", "Tg/℃", "玻璃化温度Tg")),
@@ -202,6 +200,9 @@ SECTION_SCHEMAS: dict[int, list[SchemaField]] = {
         SchemaField("含量", aliases=("纯度", "Content", "Purity")),
         SchemaField("APHA值", aliases=("APHA", "色度", "Hazen")),
         SchemaField("HLB值", aliases=("HLB", "HLB value", "亲水亲油平衡值")),
+        # 其他信息必须始终放在 Section 9 序号最末项 (9.37):
+        SchemaField("其他信息", aliases=("Other information", "Other Information",
+                                "General Information", "General Information Form")),
     ],
     10: [
         SchemaField("化学稳定性", aliases=("稳定性", "Chemical stability")),
