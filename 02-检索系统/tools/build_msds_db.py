@@ -105,13 +105,13 @@ def main() -> int:
             print(f"  ✗ 无匹配: {q}")
             return 1
         by_model: dict[str, list] = {}
-        for model, mid, sec, seq, label, value, kind in hits:
-            by_model.setdefault(model, []).append((sec, seq, label, value, kind))
+        for model, mid, sec, seq, label, value, kind, std_name in hits:
+            by_model.setdefault(model, []).append((sec, seq, label, value, kind, std_name))
         for model, items in by_model.items():
             print(f"== {model} ({len(items)} 处命中) ==")
-            for sec, seq, label, value, kind in items:
-                tag = label or kind
-                print(f"   S{sec} {seq:<5} {tag:<20} {value}")
+            for sec, seq, label, value, kind, std_name in items:
+                tag = (std_name if (sec == 3 and kind == "component" and std_name) else (label or kind))
+                print(f"   S{sec} {seq:<5} {tag:<30} {value}")
         return 0
     if "--query" in rest:
         q = rest[rest.index("--query") + 1]

@@ -237,7 +237,7 @@ class DbSearchWindow(tk.Toplevel):
         for num, title in sorted(SEC_TITLES.items()):
             if num not in have:
                 continue
-            iid = self.sec_tree.insert("", "end", text=title)
+            iid = self.sec_tree.insert("", "end", text=f"{num}. {title}")
             self._sec_items[num] = iid
         self.status_var.set(
             f"{d['model']} [{d['source']}] 明细 {d['fields_count']} 行 · "
@@ -261,7 +261,7 @@ class DbSearchWindow(tk.Toplevel):
             return
         mid, model = self._current
         d = model_detail(self._conn, mid)
-        title = SEC_TITLES.get(num, f"第{num}节")
+        title = f"{num}. {SEC_TITLES.get(num, f'第{num}节')}"
         # 清单骨架渲染: 结构与 PEA-4139 模板参照一致, 缺值标「无数据」
         rows = listed_section_rows(self._conn, mid, num)
         meta = f"{model} [{d.get('source', '')}] · 第{num}节 · 按飞书清单结构渲染"

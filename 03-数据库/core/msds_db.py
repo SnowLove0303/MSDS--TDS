@@ -313,6 +313,16 @@ def insert_docx(conn: sqlite3.Connection, path: str | Path,
          sum(len(s.components) for s in result.sections.values()),
          len(result.anomalies)))
     model_id = cur.fetchone()[0]
+
+    # 一个型号只能有一个检索记录: 清理该型号下不同 source_file 的旧冗余记录
+    old_dups = conn.execute(
+        "SELECT model_id FROM msds_model WHERE model=? AND source='docx' AND model_id != ?",
+        (model, model_id)).fetchall()
+    for (old_id,) in old_dups:
+        conn.execute("DELETE FROM msds_field WHERE model_id=?", (old_id,))
+        conn.execute("DELETE FROM msds_wide WHERE model_id=?", (old_id,))
+        conn.execute("DELETE FROM msds_model WHERE model_id=?", (old_id,))
+
     conn.execute("DELETE FROM msds_field WHERE model_id=?", (model_id,))
 
     cur_major: dict[int, str] = {}
@@ -353,11 +363,13 @@ def insert_docx(conn: sqlite3.Connection, path: str | Path,
             continue
         base = sum(1 for r in sec.iter_rows() if r.kind != "section")
         for ci, c in enumerate(sec.components):
+            from .s3_component_std import standardize_component_name
+            std_c = standardize_component_name(c.name, c.cas)
             conn.execute(
                 "INSERT INTO msds_field"
                 " (model_id, section, seq, label, std_name, value, kind, editable, row_index)"
                 " VALUES (?,?,?,?,?,?,?,?,?)",
-                (model_id, num, "3", c.name, standard_name(num, c.name),
+                (model_id, num, "3", c.name, std_c,
                  f"CAS: {c.cas} | 含量: {c.conc}",
                  "component", 1 if c.editable else 0, base + ci))
 
@@ -525,14 +537,24 @@ def list_models(conn: sqlite3.Connection) -> list[tuple]:
 
 
 def search(conn: sqlite3.Connection, query: str, limit: int = 50) -> list[tuple]:
-    """关键词检索 (标签/标准字段/值 LIKE), 返回 (型号, 节, 序号, 标签, 值)."""
-    like = f"%{query}%"
+    """关键词检索 (型号/序号/标签/标准字段/值/槽位/Schema别名 LIKE), 返回 (型号, 节, 序号, 标签, 值)."""
+    q = (query or "").strip()
+    if not q:
+        return []
+    like = f"%{q}%"
+    clause = (
+        "(m.model LIKE ? OR f.seq LIKE ? OR f.label LIKE ? OR f.std_name LIKE ?"
+        " OR f.value LIKE ? OR f.note_type LIKE ? OR f.sub_header LIKE ? OR f.sub_rows LIKE ?"
+        " OR f.std_name IN (SELECT s.name FROM schema_field s WHERE s.section=f.section AND (s.name LIKE ? OR s.aliases LIKE ?)))"
+    )
     return conn.execute(
-        "SELECT m.model, f.section, f.seq, f.label, substr(f.value,1,120)"
+        "SELECT m.model, f.section, f.seq,"
+        " CASE WHEN f.section=3 AND f.kind='component' AND f.std_name!='' THEN f.std_name ELSE f.label END,"
+        " substr(f.value,1,120)"
         " FROM msds_field f JOIN msds_model m ON m.model_id=f.model_id"
-        " WHERE f.label LIKE ? OR f.std_name LIKE ? OR f.value LIKE ?"
+        f" WHERE {clause}"
         " ORDER BY m.model, f.section, f.row_index LIMIT ?",
-        (like, like, like, limit)).fetchall()
+        (like, like, like, like, like, like, like, like, like, like, limit)).fetchall()
 
 
 def wide_row(conn: sqlite3.Connection, model_id: int) -> dict[str, str]:
@@ -565,15 +587,21 @@ def open_db(path: str | Path) -> sqlite3.Connection:
 # 数据库检索 API (PRD 第 3 节: 按型号唯一索引 / 关键词检索)
 # ==================================================================
 
-# 节标题 (与 GUI/CLI 现有输出一致; 明细库不存节标题, 由此常量提供)
+# 节标题 (规范纯标题, 不带前缀数字; 序号由 sn.number / sec 统一拼接)
 SEC_TITLES: dict[int, str] = {
-    0: "0 页眉/页脚", 1: "1.物料及供应商标识", 2: "2.危险性概述",
-    3: "3. 成分/组成资料", 4: "4.急救措施", 5: "5.消防措施",
-    6: "6.意外泄漏措施", 7: "7.操作和储存", 8: "8.接触控制/个人防护",
-    9: "9. 物理和化学特性", 10: "10.稳定性和反应性", 11: "11.毒性资料",
-    12: "12.生态信息", 13: "13. 处理注意事项", 14: "14. 运输信息",
-    15: "15. 法规信息", 16: "16. 其他信息",
+    0: "页眉/页脚", 1: "物料及供应商标识", 2: "危险性概述",
+    3: "成分/组成资料", 4: "急救措施", 5: "消防措施",
+    6: "意外泄漏措施", 7: "操作和储存", 8: "接触控制/个人防护",
+    9: "物理和化学特性", 10: "稳定性和反应性", 11: "毒性资料",
+    12: "生态信息", 13: "处理注意事项", 14: "运输信息",
+    15: "法规信息", 16: "其他信息",
 }
+
+
+def sec_full_title(num: int) -> str:
+    """返回规范全标题 (如 '1. 物料及供应商标识' / '0. 页眉/页脚')."""
+    t = SEC_TITLES.get(num, f"第{num}节")
+    return f"{num}. {t}"
 
 
 def find_models(conn: sqlite3.Connection, query: str) -> list[tuple]:
@@ -658,7 +686,7 @@ def model_tree_nodes(conn: sqlite3.Connection, model_id: int,
             flush_s11()
             cur_num = sec
             sn = SectionNode(number=sec, title=SEC_TITLES.get(sec, f"第{sec}节"),
-                             full_title=SEC_TITLES.get(sec, f"第{sec}节"))
+                             full_title=sec_full_title(sec))
             nodes.append(sn)
             cur = None
         if kind == "sub":
@@ -693,7 +721,13 @@ def model_tree_nodes(conn: sqlite3.Connection, model_id: int,
             else:
                 sn.direct_fields.append(fn)
         elif kind == "component":
-            fn = FieldNode(label=label, value=value, kind="component",
+            from .s3_component_std import standardize_component_name
+            cas = ""
+            for part in (value or "").split(" | "):
+                if part.startswith("CAS:"):
+                    cas = part[4:].strip()
+            std_c = standardize_component_name(label, cas)
+            fn = FieldNode(label=std_c, value=value, kind="component",
                            editable=bool(editable), index=ridx)
             if cur is not None:
                 cur.children.append(fn)
@@ -722,7 +756,7 @@ def listed_tree_nodes(conn: sqlite3.Connection, model_id: int,
         if sections and num not in sections:
             continue
         sn = SectionNode(number=num, title=SEC_TITLES.get(num, f"第{num}节"),
-                         full_title=SEC_TITLES.get(num, f"第{num}节"))
+                         full_title=sec_full_title(num))
         cur: BigTitleNode | None = None
         for row in listed_section_rows(conn, model_id, num):
             if row.kind == "sub":
@@ -787,22 +821,27 @@ def render_model_tsv(conn: sqlite3.Connection, model_id: int,
 
 def model_search(conn: sqlite3.Connection, query: str,
                  sections: set[int] | None = None, limit: int = 200) -> list[tuple]:
-    """关键词检索库内数据: 匹配 标签/标准字段名/字段内容 (空格多词 AND).
+    """关键词检索库内数据: 匹配 型号/序号/标签/标准字段名/字段内容/槽位/Schema别名 (空格多词 AND).
 
     返回 [(型号, model_id, 节, 序号, 标签, 值摘要), ...] (按型号→节→行序).
     """
     terms = [t.strip() for t in (query or "").split() if t.strip()]
     if not terms:
         return []
-    # 每词一组四列条件 (标签/标准字段名/字段内容/总结句类型), 词间 AND
-    cond = " AND ".join(
-        "(f.label LIKE ? OR f.std_name LIKE ? OR f.value LIKE ?"
-        " OR f.note_type LIKE ?)" for _ in terms)
+    clause = (
+        "(m.model LIKE ? OR f.seq LIKE ? OR f.label LIKE ? OR f.std_name LIKE ?"
+        " OR f.value LIKE ? OR f.note_type LIKE ? OR f.sub_header LIKE ? OR f.sub_rows LIKE ?"
+        " OR f.std_name IN (SELECT s.name FROM schema_field s WHERE s.section=f.section AND (s.name LIKE ? OR s.aliases LIKE ?)))"
+    )
+    cond = " AND ".join(clause for _ in terms)
     sql = ("SELECT m.model, m.model_id, f.section, f.seq, f.label,"
-           " substr(f.value,1,120), f.kind"
+           " substr(f.value,1,120), f.kind, f.std_name"
            " FROM msds_field f JOIN msds_model m ON m.model_id=f.model_id"
            f" WHERE {cond}")
-    args: list = [f"%{t}%" for t in terms for _ in range(4)]
+    args: list = []
+    for t in terms:
+        p = f"%{t}%"
+        args.extend([p] * 10)
     if sections:
         sql += " AND f.section IN (%s)" % ",".join("?" * len(sections))
         args.extend(sorted(sections))
@@ -913,7 +952,15 @@ _SKELETON: dict[int, list[tuple]] = {
         ("field", "9.17", "引燃温度"), ("field", "9.18", "分解温度"),
         ("field", "9.19", "动力粘度"), ("field", "9.20", "爆炸特性"),
         ("field", "9.21", "粉尘爆炸级别"), ("field", "9.22", "固体含量"),
-        ("field", "9.23", "其他信息")],
+        ("field", "9.23", "其他信息"),
+        # 14 项全量扩充字段 (方案 2: 23 → 37 项):
+        ("field", "9.24", "有效成分"), ("field", "9.25", "玻璃化温度"),
+        ("field", "9.26", "最低成膜温度"), ("field", "9.27", "NCO含量"),
+        ("field", "9.28", "羟基含量"), ("field", "9.29", "熔点/凝固点"),
+        ("field", "9.30", "酸值"), ("field", "9.31", "碘值"),
+        ("field", "9.32", "倾点"), ("field", "9.33", "浊点"),
+        ("field", "9.34", "分子量"), ("field", "9.35", "含量"),
+        ("field", "9.36", "APHA值"), ("field", "9.37", "HLB值")],
     10: [("field", "10.1", "化学稳定性"), ("field", "10.2", "危险分解产物"),
          ("field", "10.3", "可能的危害反应"), ("field", "10.4", "应避免的条件"),
          ("field", "10.5", "禁配物")],
@@ -942,12 +989,12 @@ _ND = "无数据"   # 缺失值统一标注 (结构冻结: 宁可无数据不扩
 # 结构写死 (结构冻结强制校验)
 #
 # 用户确认 (2026-08-17): 父子级结构及标签字段必须固定死, 防止其他线程/
-# Agent 在批量洗数据时改动. 本指纹固化当前 17 节 schema 字段集 + 骨架,
+# Agent 在批量洗数据时改动. 本指纹固化当前 17 节 schema 字段集 + 骨架
+# (含 S9 方案2 全量扩充 14 字段 → S9 37 项, 全库 114 宽表列/116 字典项),
 # build_msds_db.py 每次入库前强制校验, 不一致即拒绝入库.
-# 有意的结构变更流程: 修改 schema/_SKELETON → 重新生成指纹 → 用户确认.
 # ------------------------------------------------------------------
 
-STRUCT_FINGERPRINT = "07f97a44b0a48133"
+STRUCT_FINGERPRINT = "47e439749e65e5fc"
 
 
 def structure_fingerprint() -> str:
@@ -1031,6 +1078,7 @@ def _listed_rows_core(num: int, by_std: dict[str, list[str]],
                                       span=True))
         elif kind == "component":
             # 成分子表 (用户确认): 3 列 × N+1 行, 表头 [成分|CAS|含量], 每成分一行
+            from .s3_component_std import standardize_component_name
             header = ["成分", "CAS", "含量"]
             rows: list[list[str]] = []
             for c in comps:
@@ -1040,7 +1088,8 @@ def _listed_rows_core(num: int, by_std: dict[str, list[str]],
                         cas = part[4:].strip()
                     elif part.startswith("含量:"):
                         conc = part[3:].strip()
-                rows.append([c.label, cas, conc])
+                std_c = standardize_component_name(c.label, cas)
+                rows.append([std_c, cas, conc])
             out.append(SectionRow(
                 kind="subtable", label="成分", value="", editable=False,
                 span=True, sub_header=header, sub_rows=rows))
@@ -1136,7 +1185,7 @@ def listed_tree_nodes_from_result(result, sections: set[int] | None = None) -> l
         if sections and num not in sections:
             continue
         sn = SectionNode(number=num, title=SEC_TITLES.get(num, f"第{num}节"),
-                         full_title=SEC_TITLES.get(num, f"第{num}节"))
+                         full_title=sec_full_title(num))
         cur: BigTitleNode | None = None
         for row in listed_rows_from_result(result, num):
             if row.kind == "sub":

@@ -142,3 +142,32 @@ def test_section_rows_subtable(tmp_path):
     assert sub
     assert sub[0].sub_header and "组分名称" in sub[0].sub_header
 
+
+def test_search_s1_s3_s9_enhanced(conn):
+    """S1/S3/S9 检索增强: 序号检索、别名检索、跨型号属性组合检索."""
+    c, mid = conn
+    # 序号检索
+    assert model_search(c, "9.6")  # 9.6 闪点
+    assert model_search(c, "1.2")  # 1.2 使用建议
+    assert model_search(c, "3.1")  # 3.1 产品类型
+
+    # 别名/同义词检索 (schema_field 别名)
+    assert model_search(c, "Flash point")
+    assert model_search(c, "用途")
+    assert model_search(c, "Mixtures")
+
+    # 型号 + 属性组合检索 (多词 AND)
+    assert model_search(c, "PEA-4139 闪点")
+    assert model_search(c, "PEA-4139 供应商")
+
+
+def test_s3_component_standardization(conn):
+    """测试 Section 3 成分名称标准化收敛与检索呈现."""
+    from core.s3_component_std import standardize_component_name
+    # 别名/异写收敛验证
+    assert standardize_component_name("N-乙基吡咯烷酮", "2687-91-4") == "N-乙基吡咯烷酮 (NEP)"
+    assert standardize_component_name("N-乙基吡咯烷酮(NEP)") == "N-乙基吡咯烷酮 (NEP)"
+    assert standardize_component_name("苯并异噻唑啉酮(BIT)", "2634-33-5") == "1,2-苯并异噻唑-3-酮 (BIT)"
+    assert standardize_component_name("N,N二甲基乙醇胺", "108-01-0") == "N,N-二甲基乙醇胺 (DMEA)"
+    assert standardize_component_name("丙二醇丁醚", "5131-66-8") == "1-丁氧基-2-丙醇 (PnB / 丙二醇丁醚)"
+
