@@ -650,8 +650,8 @@ def read_msds(path: str | Path) -> ParseResult:
                         current.sub_tables.append(_bio_active)
                         continue
                 if _bio_active is not None:
-                    # 收集数据行: 多列且首格无冒号、非编号标题、非节标题
-                    if len(cells) > 1 and not re.search(r"：|:", cells[0]):
+                    # 收集数据行: 多列或单列有效值, 且首格无冒号、非编号标题、非节标题
+                    if not re.search(r"：|:", cells[0]):
                         if (not is_sub_heading(cells)
                                 and not is_section_title(cells[0])[0]):
                             _bio_active.rows.append(

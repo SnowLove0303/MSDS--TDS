@@ -1,0 +1,28 @@
+# -*- coding: utf-8 -*-
+from playwright.sync_api import sync_playwright
+
+CHROME = r'E:\MorenAnzhuangLujing\Chrome\Chrome\Application\chrome.exe'
+url = "https://flk.npc.gov.cn/detail?id=ff8081817a66b816017a7956b7db0ad4&fileId=&type=&title=%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E5%AE%89%E5%85%A8%E7%94%9F%E4%BA%A7%E6%B3%95"
+
+with sync_playwright() as p:
+    b = p.chromium.launch(headless=True, executable_path=CHROME, args=['--no-sandbox'])
+    context = b.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+    page = context.new_page()
+    
+    # 监听下载事件
+    page.goto(url, timeout=30000)
+    page.wait_for_timeout(2000)
+    
+    # 查找并点击包含下载的 span 或 button
+    with page.expect_download(timeout=10000) as download_info:
+        # 点击页面上的下载图标/文字
+        page.click('.download, span:has-text("下载"), i:has-text("下载")')
+        page.wait_for_timeout(1000)
+        # 点击弹出来的选项如果存在
+        page.click('.el-dropdown-menu__item, .el-dropdown-item, .tabs')
+        
+    download = download_info.value
+    print("Download suggested filename:", download.suggested_filename)
+    download.save_as(download.suggested_filename)
+    print("Downloaded successfully!")
+    b.close()

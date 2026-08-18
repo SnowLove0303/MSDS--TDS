@@ -1088,7 +1088,12 @@ def _listed_rows_core(num: int, by_std: dict[str, list[str]],
                                   editable=False))
         elif kind == "field":
             vals = by_std.get(label) or []
-            v = "\n".join(x for x in vals if x and x.strip()).strip()
+            # 优先取有意义的真实数据 (排除 无数据/不适用 等占位符), 若全为占位符则取首个
+            meaningful = [x for x in vals if is_meaningful_value(x)]
+            if meaningful:
+                v = "\n".join(meaningful).strip()
+            else:
+                v = "\n".join(x for x in vals if x and x.strip()).strip()
             filter_this = active_only or (s9_active_only and num == 9)
             if filter_this and not is_meaningful_value(v):
                 continue
@@ -1279,57 +1284,76 @@ def model_to_write_items(conn: sqlite3.Connection, model_id: int,
                          s9_active_only: bool = True) -> dict:
     """生成直接对接覆写模块 (msds_overwrite_engine.py) 的标准写入项契约 JSON.
 
-    特点:
-      - S9 理化特性默认 s9_active_only=True: 只输出有真实有效数据的项 (非 无数据/不适用 占位),
-        避免 37 个字段全量写入造成 Word docx 页面冗长过载;
-      - 结构严格符合覆写引擎契约:
-        { "sections": {"0": [...], "1": [...], "3": {...}, "9": [...]},
-          "keep_structure": [2], "empty_policy": "warn" }
+    涵盖 0~16 全节标准数据:
+      - S0: 页眉/页脚 (产品名称/产品型号)
+      - S1~S16: 各节有效字段列表 (S9 默认仅输出有效值项, 避免覆写时生成冗余空行)
+      - S3: 成分子表对象字典 {"产品类型": ..., "components": [...]}
+      - S8: 包含 8.2 生物限值子表结构对象
     """
     detail = model_detail(conn, model_id)
     model = detail.get("model", "")
 
+    sec_dict: dict[str, list | dict] = {}
+
     # S0
-    s0_items = [
+    sec_dict["0"] = [
         {"seq": "", "label": "产品名称", "value": model},
         {"seq": "", "label": "产品型号", "value": model}
     ]
 
-    # S1
-    s1_rows = listed_section_rows(conn, model_id, 1)
-    s1_items = []
-    for r in s1_rows:
-        if r.kind == "field" and is_meaningful_value(r.value):
-            s1_items.append({"seq": r.seq or "", "label": r.label, "value": r.value})
-
-    # S3
-    s3_type = "混合物"
-    s3_comps = []
-    for r in listed_section_rows(conn, model_id, 3):
-        if r.kind == "field" and r.label == "产品类型" and is_meaningful_value(r.value):
-            s3_type = r.value
-        elif r.kind == "subtable" and r.label == "成分":
-            for row in r.sub_rows:
-                if len(row) >= 3 and any(str(x).strip() for x in row):
-                    s3_comps.append({"name": str(row[0]).strip(),
-                                    "cas": str(row[1]).strip(),
-                                    "conc": str(row[2]).strip()})
-    s3_obj = {"产品类型": s3_type, "components": s3_comps}
-
-    # S9 (过滤无数据/不适用)
-    s9_rows = listed_section_rows(conn, model_id, 9, s9_active_only=s9_active_only)
-    s9_items = []
-    for r in s9_rows:
-        if r.kind == "field" and is_meaningful_value(r.value):
-            s9_items.append({"seq": r.seq or "", "label": r.label, "value": r.value})
+    for num in range(1, 17):
+        if num == 3:
+            s3_type = "混合物"
+            s3_comps = []
+            for r in listed_section_rows(conn, model_id, 3):
+                if r.kind == "field" and r.label == "产品类型" and is_meaningful_value(r.value):
+                    s3_type = r.value
+                elif r.kind == "subtable" and r.label == "成分":
+                    for row in r.sub_rows:
+                        if len(row) >= 3 and any(str(x).strip() for x in row):
+                            s3_comps.append({"name": str(row[0]).strip(),
+                                             "cas": str(row[1]).strip(),
+                                             "conc": str(row[2]).strip()})
+            sec_dict["3"] = {"产品类型": s3_type, "components": s3_comps}
+        elif num == 8:
+            s8_items = []
+            for r in listed_section_rows(conn, model_id, 8):
+                if r.kind == "field" and is_meaningful_value(r.value):
+                    s8_items.append({"seq": r.seq or "", "label": r.label, "value": r.value})
+                elif r.kind == "subtable" and r.label == "生物限值":
+                    # 检查子表是否有真实数据
+                    real_rows = [row for row in r.sub_rows if any(str(x).strip() and not _PLACEHOLDER_RE.match(str(x).strip()) for x in row)]
+                    if real_rows:
+                        s8_items.append({
+                            "seq": "8.2",
+                            "label": "生物限值",
+                            "value": "",
+                            "subtable": {
+                                "header": list(r.sub_header),
+                                "rows": real_rows
+                            }
+                        })
+            sec_dict["8"] = s8_items
+        elif num == 15:
+            s15_items = []
+            for r in listed_section_rows(conn, model_id, 15):
+                if r.kind == "note" and is_meaningful_value(r.value):
+                    s15_items.append({"seq": "", "label": r.label, "value": r.value})
+                elif r.kind == "field" and is_meaningful_value(r.value):
+                    s15_items.append({"seq": r.seq or "", "label": r.label, "value": r.value})
+            sec_dict["15"] = s15_items
+        else:
+            items = []
+            s9_clean = (num == 9 and s9_active_only)
+            for r in listed_section_rows(conn, model_id, num, s9_active_only=s9_clean):
+                if r.kind == "field" and is_meaningful_value(r.value):
+                    items.append({"seq": r.seq or "", "label": r.label, "value": r.value})
+                elif r.kind == "note" and is_meaningful_value(r.value):
+                    items.append({"seq": "", "label": r.label, "value": r.value})
+            sec_dict[str(num)] = items
 
     return {
-        "sections": {
-            "0": s0_items,
-            "1": s1_items,
-            "3": s3_obj,
-            "9": s9_items
-        },
+        "sections": sec_dict,
         "keep_structure": [2],
         "empty_policy": "warn"
     }

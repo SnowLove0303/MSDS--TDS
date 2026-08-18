@@ -49,23 +49,26 @@ from docx.text.paragraph import Paragraph
 from docx.oxml.table import CT_Tbl
 from docx.oxml.text.paragraph import CT_P
 
-# ---- 依赖：结构读取（MSDS 检索工具），仅用于“查”和“校验” ----
-STRUCTURE_READ_DIR = Path(r"F:\正式项目与模块化内容\Word 覆写模块\结构读取")
+# ---- 依赖：结构读取（MSDS 检索工具），用于“查”、“Schema 标准名映射”和“校验” ----
+STRUCTURE_READ_DIR = Path(r"F:\正式项目与模块化内容\冠志\MSDS\Word 覆写模块\结构读取")
 if str(STRUCTURE_READ_DIR) not in sys.path:
     sys.path.insert(0, str(STRUCTURE_READ_DIR))
 try:
     from core.extract import read_msds, build_hierarchy
+    from core.schema import standard_name, is_guide_line, standard_fields
     from core.structure import (normalize_component_name,
                                 normalize_component_cas,
                                 normalize_component_conc)
 except Exception as e:  # pragma: no cover
     read_msds = None
-    print(f"[WARN] 无法导入结构读取工具（read_msds）：{e}")
+    standard_name = None
+    print(f"[WARN] 无法导入结构读取工具（read_msds / schema）：{e}")
 
 def _norm_comp(value, fn):
     """用结构读取的归一化函数处理成分值；失败时降级为去空白。"""
     try:
-        return fn(value)
+        res = fn(value)
+        return re.sub(r"\s+", "", str(res))
     except Exception:
         if value is None:
             return ""
@@ -913,9 +916,9 @@ def sync_section(tbl, sec_no, items, preserve_labels, ref_pick=None, order="writ
     # 1) 分类收集模板行（跳过首行标题）：
     #    - field 行：参与匹配/删除/重建
     #    - note 行（单格通栏/首格空）：结构行，保留原位；写入项含该标签则覆写整格
-    tmpl_rows = []              # [(ri, tr, seq, nl)]
+    tmpl_rows = []              # [(ri, tr, seq, nl, std)]
     note_rows = []              # [(ri, tr)]
-    mapping = {}                # nl -> (tr, seq)
+    mapping = {}                # std_or_nl -> (tr, seq)
     orig_idx = {}               # id(tr) -> 原行号
     for ri in range(1, len(tbl.rows)):
         tr = tbl.rows[ri]._tr
@@ -923,23 +926,31 @@ def sync_section(tbl, sec_no, items, preserve_labels, ref_pick=None, order="writ
         if row_kind(tr) == "note":
             note_rows.append((ri, tr))
             continue
-        seq, label = norm_field(tbl.rows[ri].cells[0].text)
+        c0_text = tbl.rows[ri].cells[0].text
+        seq, label = norm_field(c0_text)
         nl = norm_label(label)
-        tmpl_rows.append((ri, tr, seq, nl))
+        # 利用 core/schema.py 提取标准名
+        std = standard_name(sec_no, label) if standard_name else nl
+        tmpl_rows.append((ri, tr, seq, nl, std))
+        if std and std not in mapping:
+            mapping[std] = (tr, seq)
         if nl not in mapping:
             mapping[nl] = (tr, seq)
 
-    # 写入项标签先映射到模板标准标签（以模板为主建通道）
+    # 写入项标签映射到标准名与模板标准标签
     mapped_items = []
     for it in items:
         m = dict(it)
-        m["label"] = map_field_label(sec_no, it["label"])
-        m["src_label"] = it["label"]           # 保留源标签（日志用）
+        raw_lbl = it.get("label", "")
+        std = standard_name(sec_no, raw_lbl) if standard_name else raw_lbl
+        m["std_name"] = std
+        m["label"] = map_field_label(sec_no, raw_lbl)
+        m["src_label"] = raw_lbl           # 保留源标签（日志用）
         mapped_items.append(m)
 
-    write_labels = {norm_label(it["label"]) for it in mapped_items}
+    write_labels = {norm_label(it["label"]) for it in mapped_items} | {it["std_name"] for it in mapped_items if it.get("std_name")}
     keep_labels = preserve_labels | struct_labels
-    ref_seq_list = [(seq, tr) for (_ri, tr, seq, _nl) in tmpl_rows]
+    ref_seq_list = [(seq, tr) for (_ri, tr, seq, _nl, _std) in tmpl_rows]
     consumed = set()            # 已被结构行（note）覆写消费的 item id
 
     # 2) 结构行（note）覆写：写入项含该标签 → 整格重放（标签格式继承），否则保留原位。
@@ -952,20 +963,29 @@ def sync_section(tbl, sec_no, items, preserve_labels, ref_pick=None, order="writ
         tcs = tr.findall(qn("w:tc"))
         if not tcs:
             continue
-        _s, _l = norm_field(_cell_w_text(tr, 0))
+        raw_c0 = _cell_w_text(tr, 0)
+        # 若包含冒号，提取前半部作为纯标签
+        if "：" in raw_c0 or ":" in raw_c0:
+            pure_l = raw_c0.split("：" if "：" in raw_c0 else ":")[0].strip()
+        else:
+            pure_l = raw_c0.strip()
+        _s, _l = norm_field(pure_l)
         nl = norm_label(_l)
+        std_note = standard_name(sec_no, _l) if standard_name else nl
+
         # 匹配文本：标签格优先；标签格空（如 S12 12.1 延续行）时用值格文本，
         # 使 NOTE_ROW_KEYS 的 startswith 语义键（如 '生态毒性_延续'→'其他'）能命中
-        row_text = _cell_w_text(tr, 0)
+        row_text = raw_c0
         if not row_text.strip() and len(tcs) > 1:
             row_text = _cell_w_text(tr, 1)
         for it in mapped_items:
             il = norm_label(it["label"])
-            hit = bool(nl) and il == nl
+            it_std = it.get("std_name")
+            hit = (bool(nl) and il == nl) or (bool(std_note) and it_std == std_note)
             _key_hit = None
             if not hit:
                 for _key, (mode, pat) in _note_keys.items():
-                    if il == _key and mode == "startswith" and row_text.startswith(pat):
+                    if (il == _key or it_std == _key) and mode == "startswith" and row_text.startswith(pat):
                         hit = True
                         _key_hit = _key
                     if il == _key:
@@ -985,14 +1005,22 @@ def sync_section(tbl, sec_no, items, preserve_labels, ref_pick=None, order="writ
                 logs.append(("update", sec_no, ri, it["src_label"], "", val))
                 consumed.add(id(it))
                 break
-            label_text = replace_label_keep_spacing(row_text,
-                                                    it.get("seq", ""), it["label"])
-            if val is not None and str(val).strip():
-                full = label_text + "\n" + str(val)
-                set_cell_text(tcs[0], full)
-                _delete_note_value_rows(tr, tbl)
+            # 若模板 note 行本身是 "标签:值" 形态（如 氟化橡胶 –FKM:厚度...）
+            if "：" in row_text or ":" in row_text:
+                lbl_part, _, val_part = row_text.partition("：" if "：" in row_text else ":")
+                if val is not None and str(val).strip():
+                    set_cell_text(tcs[0], f"{lbl_part}：{val}")
+                else:
+                    set_cell_text(tcs[0], f"{lbl_part}：")
             else:
-                set_cell_text(tcs[0], label_text)
+                label_text = replace_label_keep_spacing(row_text,
+                                                        it.get("seq", ""), it["label"])
+                if val is not None and str(val).strip():
+                    full = label_text + "\n" + str(val)
+                    set_cell_text(tcs[0], full)
+                    _delete_note_value_rows(tr, tbl)
+                else:
+                    set_cell_text(tcs[0], label_text)
             logs.append(("update", sec_no, ri, it["src_label"], "", it["value"]))
             consumed.add(id(it))
             break
@@ -1009,8 +1037,12 @@ def sync_section(tbl, sec_no, items, preserve_labels, ref_pick=None, order="writ
     for it in mapped_items:
         if id(it) in consumed:
             continue
+        std = it.get("std_name")
         nl = norm_label(it["label"])
-        got = mapping.get(nl)
+        # 优先通过 Schema 标准名命中，次选归一化标签
+        got = mapping.get(std) if std else None
+        if got is None:
+            got = mapping.get(nl)
         want_delete = bool(it.get("delete"))
         if got is not None and want_delete:
             del_trs.append(got[0])
@@ -1070,12 +1102,12 @@ def sync_section(tbl, sec_no, items, preserve_labels, ref_pick=None, order="writ
     #      毒理省略即保留模板、不自行判数据来源）、以及多列子表行（S8 生物限值
     #      表头/数据行等，由容器重建管理）不受影响 —— 仅两列标准字段行参与填充。
     isolated = []
-    for (ri, tr, seq, nl) in tmpl_rows:
-        if id(tr) not in reused_ids and nl not in write_labels and tr not in del_trs:
-            if keep_structure or nl in keep_labels:
+    for (ri, tr, seq, nl, std) in tmpl_rows:
+        if id(tr) not in reused_ids and nl not in write_labels and std not in write_labels and tr not in del_trs:
+            if keep_structure or nl in keep_labels or std in keep_labels:
                 isolated.append(tr)
                 if (keep_structure and missing_policy in ("no_data", "none")
-                        and nl not in preserve_labels
+                        and nl not in preserve_labels and std not in preserve_labels
                         and sec_no not in _PURE_VALUE_SECTIONS):
                     _tcs = tr.findall(qn("w:tc"))
                     if len(_tcs) == 2:
@@ -1088,8 +1120,8 @@ def sync_section(tbl, sec_no, items, preserve_labels, ref_pick=None, order="writ
     #    （旧“写入项为准”行为，仅显式关闭模板驱动时生效）
     if not keep_structure:
         delete_trs = []
-        for (ri, tr, seq, nl) in tmpl_rows:
-            if id(tr) not in reused_ids and nl not in keep_labels and nl not in write_labels:
+        for (ri, tr, seq, nl, std) in tmpl_rows:
+            if id(tr) not in reused_ids and nl not in keep_labels and std not in keep_labels and nl not in write_labels and std not in write_labels:
                 delete_trs.append(tr)
                 logs.append(("delete", sec_no, ri, nl, ""))
         op_delete_rows(delete_trs)
@@ -1411,11 +1443,21 @@ def overwrite(template_path, write_items, out_path, preserve=None, sections=None
         if sec_no == 3 and isinstance(payload, dict):
             logs = sync_section3(tbl, payload, preserve_labels, ref_pick=sec_pick,
                                  empty_policy=empty_policy)
+        elif sec_no == 8 and isinstance(payload, list) and any("subtable" in it for it in payload if isinstance(it, dict)):
+            # 标准契约 list 格式的 S8 (含 subtable 对象)
+            logs = sync_section8_list(tbl, payload, preserve_labels, ref_pick=sec_pick,
+                                      struct_labels=struct_labels, empty_policy=empty_policy,
+                                      missing_policy=missing_policy, missing_text=missing_text)
         elif sec_no == 8 and isinstance(payload, dict) and \
                 ("bio" in payload or "职业接触限值" in payload):
             logs = sync_section8(tbl, payload, preserve_labels, ref_pick=sec_pick,
                                  struct_labels=struct_labels, empty_policy=empty_policy,
                                  missing_policy=missing_policy, missing_text=missing_text)
+        elif sec_no == 15 and isinstance(payload, list):
+            # 标准契约 list 格式的 S15 (含指引段/其它的规定/符合下列法规要求/法规条目N)
+            logs = sync_section15_list(tbl, payload, preserve_labels, ref_pick=sec_pick,
+                                       struct_labels=struct_labels, empty_policy=empty_policy,
+                                       missing_policy=missing_policy, missing_text=missing_text)
         elif sec_no == 15 and isinstance(payload, dict) and "法规列表" in payload:
             logs = sync_section15(tbl, payload, preserve_labels, ref_pick=sec_pick,
                                   struct_labels=struct_labels, empty_policy=empty_policy,
@@ -1578,6 +1620,11 @@ def verify_output(template_path, out_path, write_items, preserve=None, sections=
                 if nl and nl not in found:
                     found[nl] = "\n".join(ln_s.split("\n")[1:])
             for it in payload:
+                if not isinstance(it, dict):
+                    continue
+                # S15 的纯标题说明段 (其它的规定 / 符合下列法规要求) 读回为 lines/子标题，且值为空，跳过值比对
+                if sec_no == 15 and it.get("label") in ("其它的规定", "符合下列法规要求"):
+                    continue
                 exp_label = norm_label(map_field_label(sec_no, it["label"]))
                 exp_val = it["value"]
                 if ("_after" in it or "_before" in it) and exp_label not in found:
@@ -1585,6 +1632,18 @@ def verify_output(template_path, out_path, write_items, preserve=None, sections=
                     log(f"verify: S{sec_no} 新增字段 {it['label']!r} 未在读回中定位（跳过校验）", "WARN")
                     continue
                 if exp_label not in found:
+                    # 尝试用 schema.standard_name 或 note 文本回退匹配
+                    std = standard_name(sec_no, it["label"]) if standard_name else None
+                    if std and norm_label(std) in found:
+                        exp_label = norm_label(std)
+                    elif any(exp_val.strip() in str(ln).strip() for ln in sd.lines):
+                        # 作为 note 通栏文本存在
+                        continue
+                    elif sec_no in (8, 15) and any(exp_label in str(ln) for ln in sd.lines):
+                        continue
+                if exp_label not in found:
+                    if "subtable" in it:
+                        continue # 子表不按普通 field 匹配
                     problems.append(f"S{sec_no}.{it['label']}: 输出缺失该字段")
                 elif found[exp_label].strip() != exp_val.strip():
                     problems.append(f"S{sec_no}.{it['label']}: 期望{exp_val!r} 实际{found[exp_label]!r}")
@@ -1955,6 +2014,149 @@ def sync_section15(tbl, payload, preserve_labels, ref_pick=None, empty_policy="w
     if new_tr_ids:
         ordered = [tbl.rows[0]._tr] + [tbl.rows[i]._tr for i in range(1, len(tbl.rows))]
         fix_new_row_borders(tbl, ordered, {id(t) for t in new_tr_ids}, tag="S15")
+    return logs
+
+
+def sync_section8_list(tbl, payload, preserve_labels, ref_pick=None, empty_policy="warn",
+                      struct_labels=None, missing_policy="preserve", missing_text="无数据"):
+    """S8 专用管线 (处理 list 格式写入项, 包含 subtable 生物限值对象)."""
+    logs = []
+    normal_items = []
+    subtable_item = None
+    for it in payload:
+        if isinstance(it, dict) and "subtable" in it:
+            subtable_item = it
+        else:
+            normal_items.append(it)
+    # 1. 覆写普通防护字段
+    logs += sync_section(tbl, 8, normal_items, preserve_labels, ref_pick=ref_pick,
+                         struct_labels=struct_labels or set(), keep_structure=True,
+                         empty_policy=empty_policy, missing_policy=missing_policy,
+                         missing_text=missing_text)
+
+    # 2. 重建生物限值 5 列子表 (保护表头, 动态填充数据)
+    if subtable_item is not None:
+        st = subtable_item.get("subtable", {})
+        sub_rows = st.get("rows", [])
+        head_idx = None
+        for ri in range(1, len(tbl.rows)):
+            _s, label = norm_field(tbl.rows[ri].cells[0].text)
+            if norm_label(label) == "组分名称":
+                head_idx = ri
+                break
+        if head_idx is not None:
+            # 清理原有数据行 (直到遇到工程控制或非子表行)
+            del_trs = []
+            for ri in range(head_idx + 1, len(tbl.rows)):
+                tcs = tbl.rows[ri]._tr.findall(qn("w:tc"))
+                if len(tcs) < 5:
+                    break
+                _s, label = norm_field(tbl.rows[ri].cells[0].text)
+                nl = norm_label(label)
+                if nl in ("工程控制", "职业接触限值", "组分名称") or re.match(r"^\d", _s or ""):
+                    break
+                del_trs.append(tbl.rows[ri]._tr)
+            op_delete_rows(del_trs)
+            if del_trs:
+                logs.append(("delete", 8, -1, f"原生物限值数据行x{len(del_trs)}", ""))
+
+            head_tr = tbl.rows[head_idx]._tr
+            prev = head_tr
+            new_tr_ids = []
+            for i, row in enumerate(sub_rows):
+                new_tr = copy.deepcopy(head_tr)
+                tcs = new_tr.findall(qn("w:tc"))
+                if len(row) == 1:
+                    # 单列合并值 (如 "未建立")
+                    set_cell_text(tcs[0], str(row[0] or "").strip())
+                    for ci in range(1, len(tcs)):
+                        set_cell_text(tcs[ci], "")
+                else:
+                    for ci in range(min(len(tcs), len(row))):
+                        val = str(row[ci] or "").strip()
+                        ref = _cell_w_text(new_tr, ci)
+                        set_cell_text(tcs[ci], replace_value_keep_spacing(ref, val))
+                prev.addnext(new_tr)
+                prev = new_tr
+                new_tr_ids.append(new_tr)
+                logs.append(("insert", 8, f"生物限值[{i}]", str(row[0]) if row else ""))
+            if new_tr_ids:
+                ordered = [tbl.rows[0]._tr] + [tbl.rows[k]._tr for k in range(1, len(tbl.rows))]
+                fix_new_row_borders(tbl, ordered, {id(t) for t in new_tr_ids}, tag="S8")
+    return logs
+
+
+def sync_section15_list(tbl, payload, preserve_labels, ref_pick=None, empty_policy="warn",
+                       struct_labels=None, missing_policy="preserve", missing_text="无数据"):
+    """S15 专用管线 (处理 list 格式写入项, 严格锁定行序: 指引段 -> 其它的规定 -> 符合下列法规要求 -> 法规条目N)."""
+    logs = []
+    guide_item = None
+    other_item = None
+    req_item = None
+    law_items = []
+
+    for it in payload:
+        if not isinstance(it, dict):
+            continue
+        lbl = it.get("label", "")
+        val = it.get("value", "")
+        if "指引段" in lbl:
+            guide_item = val
+        elif "其它的规定" in lbl:
+            other_item = val
+        elif "符合下列法规要求" in lbl:
+            req_item = val
+        elif "法规条目" in lbl or "GB" in val or "法规" in val:
+            law_items.append(val)
+        else:
+            # 其它常规
+            if not guide_item and is_guide_line(val):
+                guide_item = val
+            else:
+                law_items.append(val)
+
+    # 1. 查找锚点
+    r_guide = None
+    r_other = None
+    r_req = None
+    for row in tbl.rows[1:]:
+        txt = _cell_w_text(row._tr, 0).strip()
+        if "物质或混合物" in txt or "法律法规" in txt:
+            r_guide = row._tr
+        elif "其它的规定" in txt:
+            r_other = row._tr
+        elif "符合下列法规要求" in txt:
+            r_req = row._tr
+
+    if r_guide is not None and guide_item:
+        set_cell_text(r_guide.findall(qn("w:tc"))[0], guide_item)
+        logs.append(("update", 15, -1, "指引段", "", guide_item))
+
+    if r_other is not None and other_item:
+        set_cell_text(r_other.findall(qn("w:tc"))[0], "其它的规定：")
+        logs.append(("update", 15, -1, "其它的规定", "", "其它的规定："))
+
+    if r_req is not None:
+        set_cell_text(r_req.findall(qn("w:tc"))[0], "符合下列法规要求：")
+        # 清除其后的旧条目
+        n = _delete_note_value_rows(r_req, tbl)
+        if n:
+            logs.append(("delete", 15, -1, f"法规原条目行x{n}", ""))
+        # 逐条按顺序向下插入
+        prev = r_req
+        new_tr_ids = []
+        for law in law_items:
+            new_tr = copy.deepcopy(r_req)
+            tcs = new_tr.findall(qn("w:tc"))
+            if tcs:
+                set_cell_text(tcs[0], law)
+            prev.addnext(new_tr)
+            prev = new_tr
+            new_tr_ids.append(new_tr)
+            logs.append(("insert", 15, "法规条目", law))
+        if new_tr_ids:
+            ordered = [tbl.rows[0]._tr] + [tbl.rows[i]._tr for i in range(1, len(tbl.rows))]
+            fix_new_row_borders(tbl, ordered, {id(t) for t in new_tr_ids}, tag="S15")
     return logs
 
 
