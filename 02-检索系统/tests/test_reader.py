@@ -14,7 +14,7 @@ PU1034 = Path(r"F:\正式项目与模块化内容\MSDS 数据清理模块\标准
 def test_default_template_is_embedded():
     """默认模板应为定稿模板 (用户确认唯一源), 且可读."""
     from core.docx_reader import _TEMPLATE_DINGGAO
-    assert str(_TEMPLATE_DINGGAO).endswith("定稿模板\\PEA-4139 MSDS_CN 冠志 模板.docx")
+    assert str(_TEMPLATE_DINGGAO).endswith("推导方案\\PEA-4139 MSDS_CN 冠志 模板.docx")
     assert _TEMPLATE_DINGGAO.exists(), "定稿模板文件缺失"
     assert TEMPLATE == _TEMPLATE_DINGGAO, "TEMPLATE_PATH 应指向定稿模板"
     r = read_msds(TEMPLATE)
