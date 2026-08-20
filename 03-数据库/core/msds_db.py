@@ -9,7 +9,7 @@
       的 SECTION_SCHEMAS + _BASE_SCHEMAS 固化导出.
 
   msds_model    型号主表
-      每型号(×来源)一行: 型号 / 来源文件 / 来源类型(docx|xlsx) /
+      中文库每个型号严格一行: 型号 / 来源文件 / 来源类型(docx|xlsx) /
       sha256 / 统计摘要 / 导入时间. model_id 是明细与宽表的外键.
 
   msds_field    明细长表 (父子级全保留, 可追溯)
@@ -76,8 +76,10 @@ CREATE TABLE IF NOT EXISTS msds_model (
     fields_count    INTEGER DEFAULT 0,
     components_count INTEGER DEFAULT 0,
     anomalies_count INTEGER DEFAULT 0,
+    language       TEXT NOT NULL DEFAULT 'zh-CN',
+    skeleton_version TEXT NOT NULL DEFAULT '17-section-9.37',
     created_at      TEXT DEFAULT (datetime('now', 'localtime')),
-    UNIQUE(model, source, source_file)
+    UNIQUE(model)
 );
 
 CREATE TABLE IF NOT EXISTS msds_field (
@@ -104,6 +106,56 @@ CREATE TABLE IF NOT EXISTS msds_wide (
 CREATE INDEX IF NOT EXISTS idx_field_model ON msds_field(model_id);
 CREATE INDEX IF NOT EXISTS idx_field_section ON msds_field(section, label);
 CREATE INDEX IF NOT EXISTS idx_field_std ON msds_field(std_name);
+
+CREATE TABLE IF NOT EXISTS field_mapping (
+    mapping_id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    section          INTEGER NOT NULL,
+    standard_name    TEXT NOT NULL,
+    raw_label        TEXT NOT NULL,
+    mapping_type     TEXT NOT NULL, -- 标准名|可选字段|单位变体|待归类
+    occurrence_count INTEGER NOT NULL DEFAULT 0,
+    status           TEXT NOT NULL DEFAULT 'active', -- active|pending|rejected
+    first_seen_model TEXT DEFAULT '',
+    UNIQUE(section, raw_label)
+);
+
+CREATE TABLE IF NOT EXISTS msds_unmapped (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    model_id    INTEGER NOT NULL REFERENCES msds_model(model_id),
+    section     INTEGER NOT NULL,
+    seq         TEXT DEFAULT '',
+    raw_label   TEXT NOT NULL,
+    raw_value   TEXT DEFAULT '',
+    reason      TEXT NOT NULL DEFAULT '未匹配标准骨架',
+    status      TEXT NOT NULL DEFAULT 'pending',
+    created_at  TEXT DEFAULT (datetime('now', 'localtime')),
+    UNIQUE(model_id, section, seq, raw_label, raw_value)
+);
+
+-- 兼容旧查询的 Section 9 映射视图表；数据由 refresh_s9_mapping 统一生成。
+CREATE TABLE IF NOT EXISTS s9_label_mapping (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    std_name TEXT NOT NULL,
+    std_seq TEXT DEFAULT '',
+    raw_label TEXT NOT NULL,
+    occurrences_count INTEGER DEFAULT 0,
+    models_sample TEXT DEFAULT '',
+    sample_values TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    UNIQUE(std_name, raw_label)
+);
+
+CREATE TABLE IF NOT EXISTS s9_raw_expression (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    model TEXT NOT NULL,
+    source_file TEXT DEFAULT '',
+    raw_seq TEXT DEFAULT '',
+    raw_label TEXT DEFAULT '',
+    std_name TEXT DEFAULT '',
+    is_standard INTEGER DEFAULT 0,
+    raw_value TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
 """
 
 
@@ -132,7 +184,9 @@ def init_db(conn: sqlite3.Connection) -> list[tuple[int, str, str]]:
     用于首次建库与 --init 重置; 调用即清空 msds_model/msds_field/msds_wide.
     """
     conn.executescript(_DDL)          # 首次: 框架表存在
-    for t in ("msds_wide", "msds_field", "msds_model", "schema_field"):
+    for t in ("msds_wide", "msds_unmapped", "field_mapping",
+              "s9_raw_expression", "s9_label_mapping",
+              "msds_field", "msds_model", "schema_field"):
         conn.execute(f"DROP TABLE IF EXISTS {t}")
     conn.executescript(_DDL)          # 重建全部 (含空 msds_wide)
     conn.execute("DROP TABLE IF EXISTS msds_wide")
@@ -144,17 +198,57 @@ def init_db(conn: sqlite3.Connection) -> list[tuple[int, str, str]]:
 
     cur = conn.cursor()
     for num in range(0, 17):
-        for f in standard_fields(num):
+        for field_index, f in enumerate(standard_fields(num), 1):
+            # Section 9 的规范序号是骨架的一部分，不能依赖源文件序号；
+            # 原始文件的 9.x 序号只作为事实层信息保存。
+            schema_seq = f"9.{field_index}" if num == 9 else f.seq
             cur.execute(
                 "INSERT OR REPLACE INTO schema_field"
                 " (section, seq, name, kind, collapse, multi, in_wide, aliases)"
                 " VALUES (?,?,?,?,?,?,?,?)",
-                (num, f.seq, f.name, f.kind,
+                (num, schema_seq, f.name, f.kind,
                  1 if f.collapse else 0, 1 if f.multi else 0,
                  0 if f.name in _WIDE_EXCLUDE else 1,
                  json.dumps(list(f.aliases), ensure_ascii=False)))
+            # 标准名和可选原始表达进入正式映射库；标准骨架名称永远取 f.name。
+            cur.execute(
+                "INSERT OR IGNORE INTO field_mapping"
+                " (section, standard_name, raw_label, mapping_type, status)"
+                " VALUES (?,?,?,?,?)",
+                (num, f.name, f.name, "标准名", "active"))
+            for alias in f.aliases:
+                cur.execute(
+                    "INSERT OR IGNORE INTO field_mapping"
+                    " (section, standard_name, raw_label, mapping_type, status)"
+                    " VALUES (?,?,?,?,?)",
+                    (num, f.name, alias, "可选字段", "active"))
     conn.commit()
     return cols
+
+
+def refresh_s9_mapping(conn: sqlite3.Connection) -> None:
+    """从正式标准映射和原始明细刷新 S9 兼容映射表.
+
+    正式来源是 field_mapping；两个 s9_* 表只保留兼容查询，不再作为
+    骨架或标准字段定义来源。
+    """
+    conn.execute("DELETE FROM s9_label_mapping")
+    conn.execute("DELETE FROM s9_raw_expression")
+    conn.execute(
+        "INSERT INTO s9_label_mapping"
+        " (std_name, std_seq, raw_label, occurrences_count, models_sample, sample_values)"
+        " SELECT fm.standard_name, sf.seq, fm.raw_label, fm.occurrence_count, '', ''"
+        " FROM field_mapping fm LEFT JOIN schema_field sf"
+        " ON sf.section=9 AND sf.name=fm.standard_name"
+        " WHERE fm.section=9 AND fm.status='active' AND fm.standard_name<>''")
+    conn.execute(
+        "INSERT INTO s9_raw_expression"
+        " (model, source_file, raw_seq, raw_label, std_name, is_standard, raw_value)"
+        " SELECT m.model, m.source_file, f.seq, f.label, f.std_name,"
+        " CASE WHEN f.label=f.std_name THEN 1 ELSE 0 END, f.value"
+        " FROM msds_field f JOIN msds_model m ON m.model_id=f.model_id"
+        " WHERE f.section=9 AND f.kind='field' AND f.label<>''")
+    conn.commit()
 
 
 # ------------------------------------------------------------------
@@ -288,7 +382,11 @@ def _listed_field_names(num: int) -> frozenset[str]:
 
 def insert_docx(conn: sqlite3.Connection, path: str | Path,
                 cols: list[tuple[int, str, str]]) -> int:
-    """docx → 型号主表 + 明细 + 宽表. 返回 model_id (已存在则更新)."""
+    """中文 docx → 单型号标准记录 + 原始映射审计 + 宽表.
+
+    型号是中文库的业务唯一键；重新导入同型号时更新这一条记录，绝不
+    生成第二条同型号数据。清单外字段不再丢弃，而是进入 msds_unmapped。
+    """
     from .docx_reader import read_msds
     path = Path(path)
     result = read_msds(str(path))
@@ -298,32 +396,26 @@ def insert_docx(conn: sqlite3.Connection, path: str | Path,
     cur = conn.cursor()
     cur.execute(
         "INSERT INTO msds_model (model, source, source_file, sha256, header, footer,"
-        " sections_count, tables_count, fields_count, components_count, anomalies_count)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?,?)"
-        " ON CONFLICT(model, source, source_file) DO UPDATE SET"
+        " sections_count, tables_count, fields_count, components_count, anomalies_count, language, skeleton_version)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        " ON CONFLICT(model) DO UPDATE SET"
         " model=excluded.model, sha256=excluded.sha256, header=excluded.header,"
         " footer=excluded.footer, sections_count=excluded.sections_count,"
         " tables_count=excluded.tables_count, fields_count=excluded.fields_count,"
         " components_count=excluded.components_count,"
-        " anomalies_count=excluded.anomalies_count"
+        " anomalies_count=excluded.anomalies_count, source=excluded.source,"
+        " source_file=excluded.source_file, language=excluded.language,"
+        " skeleton_version=excluded.skeleton_version"
         " RETURNING model_id",
         (model, "docx", str(path), _sha256(path), result.header, result.footer,
          result.sections_count, result.tables_count,
          sum(len(s.fields) for s in result.sections.values()),
          sum(len(s.components) for s in result.sections.values()),
-         len(result.anomalies)))
+         len(result.anomalies), "zh-CN", "17-section-9.37"))
     model_id = cur.fetchone()[0]
 
-    # 一个型号只能有一个检索记录: 清理该型号下不同 source_file 的旧冗余记录
-    old_dups = conn.execute(
-        "SELECT model_id FROM msds_model WHERE model=? AND source='docx' AND model_id != ?",
-        (model, model_id)).fetchall()
-    for (old_id,) in old_dups:
-        conn.execute("DELETE FROM msds_field WHERE model_id=?", (old_id,))
-        conn.execute("DELETE FROM msds_wide WHERE model_id=?", (old_id,))
-        conn.execute("DELETE FROM msds_model WHERE model_id=?", (old_id,))
-
     conn.execute("DELETE FROM msds_field WHERE model_id=?", (model_id,))
+    conn.execute("DELETE FROM msds_unmapped WHERE model_id=?", (model_id,))
 
     cur_major: dict[int, str] = {}
     for num, sec in sorted(result.sections.items()):
@@ -348,9 +440,28 @@ def insert_docx(conn: sqlite3.Connection, path: str | Path,
             ntype = classify_note(num, row.value) if kind == "note" else ""
             std = (_db_std_name(num, row.label, cur_major) if row.kind == "field"
                    else standard_name(num, row.label))
-            # 结构冻结: 清单外 field (std 不在该节清单字段集) → 丢弃 (写无数据, 不扩结构)
+            # 结构冻结: 清单外 field 不得进入标准字段表，但必须进入待归类池，
+            # 保留原始标签/值，供后续人工确认映射；绝不扩充标准骨架。
             if row.kind == "field" and std and std not in _listed_field_names(num):
+                conn.execute(
+                    "INSERT OR IGNORE INTO msds_unmapped"
+                    " (model_id, section, seq, raw_label, raw_value, reason)"
+                    " VALUES (?,?,?,?,?,?)",
+                    (model_id, num, row.seq, row.label, row.value,
+                     "未匹配标准骨架字段"))
+                conn.execute(
+                    "INSERT INTO field_mapping"
+                    " (section, standard_name, raw_label, mapping_type, occurrence_count, status, first_seen_model)"
+                    " VALUES (?,?,?,?,1,'pending',?)"
+                    " ON CONFLICT(section, raw_label) DO UPDATE SET"
+                    " occurrence_count=occurrence_count+1, status='pending'",
+                    (num, "", row.label, "待归类", model))
                 continue
+            if row.kind == "field" and row.label.strip():
+                conn.execute(
+                    "UPDATE field_mapping SET occurrence_count=occurrence_count+1"
+                    " WHERE section=? AND raw_label=?",
+                    (num, row.label))
             conn.execute(
                 "INSERT INTO msds_field"
                 " (model_id, section, seq, label, std_name, value, kind, editable, row_index, note_type)"
@@ -445,11 +556,12 @@ def insert_pivot_xlsx(conn: sqlite3.Connection, path: str | Path,
     cur.execute(
         "INSERT INTO msds_model (model, source, source_file)"
         " VALUES (?,?,?)"
-        " ON CONFLICT(model, source, source_file) DO UPDATE SET model=excluded.model"
+        " ON CONFLICT(model) DO UPDATE SET source=excluded.source, source_file=excluded.source_file"
         " RETURNING model_id",
         (model, "xlsx", str(path)))
     model_id = cur.fetchone()[0]
     conn.execute("DELETE FROM msds_field WHERE model_id=?", (model_id,))
+    conn.execute("DELETE FROM msds_unmapped WHERE model_id=?", (model_id,))
 
     ridx = 0
     comps: dict[int, dict[str, str]] = {}   # 成分槽: {idx: {name/cas/conc}}
@@ -478,11 +590,28 @@ def insert_pivot_xlsx(conn: sqlite3.Connection, path: str | Path,
             # 成分槽列 (成分N名称/CAS/含量) → 组合为 component 行 (S3 结构)
             comps.setdefault(int(m.group(1)), {})[m.group(2)] = val
             continue
+        std = standard_name(sec, label)
+        if std and std not in _listed_field_names(sec):
+            conn.execute(
+                "INSERT OR IGNORE INTO msds_unmapped"
+                " (model_id, section, seq, raw_label, raw_value, reason) VALUES (?,?,?,?,?,?)",
+                (model_id, sec, seq, label, val, "未匹配标准骨架字段"))
+            conn.execute(
+                "INSERT INTO field_mapping"
+                " (section, standard_name, raw_label, mapping_type, occurrence_count, status, first_seen_model)"
+                " VALUES (?,?,?,?,1,'pending',?)"
+                " ON CONFLICT(section, raw_label) DO UPDATE SET occurrence_count=occurrence_count+1, status='pending'",
+                (sec, "", label, "待归类", model))
+            continue
+        if label:
+            conn.execute(
+                "UPDATE field_mapping SET occurrence_count=occurrence_count+1 WHERE section=? AND raw_label=?",
+                (sec, label))
         conn.execute(
             "INSERT INTO msds_field"
             " (model_id, section, seq, label, std_name, value, kind, editable, row_index)"
             " VALUES (?,?,?,?,?,?,?,?,?)",
-            (model_id, sec, seq, label, standard_name(sec, label), val, "field",
+            (model_id, sec, seq, label, std, val, "field",
              1, ridx))
         ridx += 1
 
@@ -511,6 +640,10 @@ def insert_pivot_xlsx(conn: sqlite3.Connection, path: str | Path,
         if sec is None or not label_raw or label_raw == "(总结句)":
             continue
         std = standard_name(sec, label_raw)
+        if label_raw:
+            conn.execute(
+                "UPDATE field_mapping SET occurrence_count=occurrence_count+1 WHERE section=? AND raw_label=?",
+                (sec, label_raw))
         col = f"S{sec}__{std}"
         if std and col in {c[1] for c in cols} and val and col not in wide:
             wide[col] = val
@@ -994,8 +1127,7 @@ _SKELETON: dict[int, list[tuple]] = {
     12: [("note", "", "", "产品说明"), ("note", "", "", "成分参考引导段"),
          ("field", "12.1", "生态毒性"), ("field", "12.2", "持久性和降解性"),
          ("field", "12.3", "其他不利的影响")],
-    13: [("note", "", "", "法规定义"), ("note", "", "", "欧盟废弃细则"),
-         ("field", "", "处理方法")],
+    13: [("field", "", "处理方法")],
     14: [("field", "14.1", "公路和铁路运输"), ("field", "14.2", "海上运输"),
          ("field", "14.3", "空运"), ("field", "14.4", "用户特殊注意事项")],
     15: [("note", "", "", "指引段"), ("note", "", "其它的规定", ""),
@@ -1027,7 +1159,11 @@ def is_meaningful_value(v: str) -> bool:
 # 不一致即拒绝入库.
 # ------------------------------------------------------------------
 
-STRUCT_FINGERPRINT = "68c575962db1e886"
+# v2.3 (2026-08-18): S13 骨架修正 — 移除脱离模板/骨架标准的 note 槽位
+#   ('法规定义'/'欧盟废弃细则'), 仅保留事实存在的方法处理字段 '处理方法'.
+#   模板 S13 仅 3 行 (节标题 + 首行说明 + 处理方法), 用户确认非法标签一律禁止.
+# 旧固化值 e50fdef9f3cf9aa5 对应含非法 note 槽位的骨架, 已废弃.
+STRUCT_FINGERPRINT = "a33596548469b67d"
 
 
 def structure_fingerprint() -> str:
@@ -1354,8 +1490,15 @@ def model_to_write_items(conn: sqlite3.Connection, model_id: int,
 
     return {
         "sections": sec_dict,
-        "keep_structure": [2],
-        "empty_policy": "warn"
+        # 模板驱动保护节（除 S9 外全部）: 模板字段行全保留为骨架, 写入项只覆写值,
+        # 模板多出字段保留; S9 保持瘦身驱动 (写入项为准, 过滤无数据占位行).
+        # 修复 (2026-08-18): 旧值 [2] 仅保护 S2, 导致 S8 无生物限值数据时
+        # 走通用 sync_section 且 keep_structure=False, 误删手部防护/手套材料/
+        # 生物限值表头/工程控制行 — 违反飞书 v2.1 模板驱动规范.
+        "keep_structure": [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16],
+        "empty_policy": "warn",
+        "missing_policy": "no_data",
+        "missing_text": "无数据",
     }
 
 

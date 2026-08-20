@@ -26,7 +26,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core.msds_db import (find_models, insert_docx, insert_pivot_xlsx,
                           list_models, model_detail, model_search, open_db,
                           render_model_json, render_model_tree,
-                          render_model_tsv, search, wide_row)
+                          render_model_tsv, search, wide_row,
+                          refresh_s9_mapping)
 
 
 def _collect_docx(inputs: list[str]) -> list[Path]:
@@ -36,9 +37,15 @@ def _collect_docx(inputs: list[str]) -> list[Path]:
         p = Path(raw)
         if p.is_dir():
             out.extend(sorted(f for f in p.glob("*.docx")
-                              if not f.name.startswith("~$")))
+                              if not f.name.startswith("~$")
+                              and "模板覆写输出" not in f.stem
+                              and "标准化输出" not in f.stem
+                              and "底版" not in f.stem))
         elif p.exists() and p.suffix.lower() == ".docx":
-            out.append(p)
+            if any(x in p.stem for x in ("模板覆写输出", "标准化输出", "底版")):
+                print(f"  ⚠️ 跳过生成产物: {p}")
+            else:
+                out.append(p)
         else:
             print(f"  ⚠️ 跳过 (非 docx 或不存在): {p}")
     return sorted(set(out), key=lambda x: str(x).lower())
@@ -192,6 +199,9 @@ def main() -> int:
         except Exception as exc:
             failed.append((Path(x).name, str(exc)))
             print(f"  ✗ xlsx {Path(x).name}: {exc}")
+
+    # 兼容旧版 S9 查询表必须在整批入库结束后统一刷新，避免旧口径残留。
+    refresh_s9_mapping(db)
 
     n_model = db.execute("SELECT COUNT(*) FROM msds_model").fetchone()[0]
     n_field = db.execute("SELECT COUNT(*) FROM msds_field").fetchone()[0]
